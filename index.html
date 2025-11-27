@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎓 SIGED · Carga Automática de Notas</title>
+    <title>SIGED · Carga de Notas</title>
     <style>
         * {
             margin: 0;
@@ -12,152 +12,135 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #fafafa;
+            color: #2c3e50;
+            line-height: 1.6;
             padding: 20px;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
         }
 
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
+        header {
             text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
         }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        h1 {
+            font-size: 1.8em;
+            font-weight: 400;
+            color: #2c3e50;
+            margin-bottom: 8px;
         }
 
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            font-weight: 300;
         }
 
-        .main-content {
+        .layout {
             display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 20px;
-            padding: 30px;
+            grid-template-columns: 320px 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
         }
 
-        .panel {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .panel-title {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #495057;
+        .card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 24px;
             margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #667eea;
+        }
+
+        .card-title {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #7f8c8d;
+            margin-bottom: 16px;
+            font-weight: 500;
         }
 
         .file-upload {
-            margin-bottom: 25px;
-        }
-
-        .file-input-wrapper {
             position: relative;
-            overflow: hidden;
-            display: inline-block;
-            width: 100%;
+            margin-bottom: 20px;
         }
 
-        .file-input-wrapper input[type=file] {
-            position: absolute;
-            left: -9999px;
+        .file-input {
+            display: none;
         }
 
         .file-label {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: block;
+            padding: 12px 20px;
+            background: #2c3e50;
             color: white;
-            border-radius: 10px;
+            text-align: center;
+            border-radius: 3px;
             cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-            font-size: 1.1em;
+            transition: background 0.2s;
+            font-size: 0.9em;
         }
 
         .file-label:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+            background: #34495e;
         }
 
         .file-name {
-            margin-top: 10px;
-            padding: 10px;
-            background: white;
-            border-radius: 8px;
-            font-size: 0.9em;
-            color: #6c757d;
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: #7f8c8d;
             text-align: center;
         }
 
-        .info-card {
-            background: white;
-            border-radius: 10px;
-            padding: 15px;
+        .info-box {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 3px;
             margin-bottom: 20px;
-            border-left: 4px solid #667eea;
+            font-size: 0.9em;
+            line-height: 1.8;
         }
 
-        .info-card h3 {
-            color: #495057;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        .info-card p {
-            color: #6c757d;
-            margin: 5px 0;
-            font-size: 0.95em;
+        .info-box p {
+            margin: 4px 0;
+            color: #5a6c7d;
         }
 
         .form-group {
             margin-bottom: 20px;
         }
 
-        .form-group label {
+        label {
             display: block;
+            font-size: 0.85em;
+            color: #5a6c7d;
             margin-bottom: 8px;
-            color: #495057;
-            font-weight: 600;
+            font-weight: 500;
         }
 
         select {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #ced4da;
-            border-radius: 8px;
-            font-size: 1em;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 0.9em;
             background: white;
+            color: #2c3e50;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: border 0.2s;
         }
 
         select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #3498db;
         }
 
         .radio-group {
@@ -166,211 +149,203 @@
             gap: 10px;
         }
 
-        .radio-option {
+        .radio-item {
             display: flex;
             align-items: center;
-            padding: 12px;
-            background: white;
-            border-radius: 8px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 3px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: background 0.2s;
         }
 
-        .radio-option:hover {
-            background: #e9ecef;
+        .radio-item:hover {
+            background: #ecf0f1;
         }
 
-        .radio-option input[type="radio"] {
+        .radio-item input[type="radio"] {
             margin-right: 10px;
-            width: 18px;
-            height: 18px;
             cursor: pointer;
         }
 
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+        .radio-item label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 400;
         }
 
         .btn {
-            flex: 1;
+            display: block;
+            width: 100%;
             padding: 12px;
             border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1em;
+            border-radius: 3px;
+            font-size: 0.9em;
             cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+            font-weight: 500;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #3498db;
             color: white;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+            background: #2980b9;
         }
 
         .btn-success {
-            background: #28a745;
+            background: #27ae60;
             color: white;
         }
 
         .btn-success:hover {
-            background: #218838;
-            transform: translateY(-2px);
-        }
-
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
-            transform: translateY(-2px);
-        }
-
-        .btn-warning {
-            background: #ffc107;
-            color: #212529;
-        }
-
-        .btn-warning:hover {
-            background: #e0a800;
-            transform: translateY(-2px);
-        }
-
-        .btn-info {
-            background: #17a2b8;
-            color: white;
-        }
-
-        .btn-info:hover {
-            background: #138496;
-            transform: translateY(-2px);
+            background: #229954;
         }
 
         .btn-secondary {
-            background: #6c757d;
+            background: #95a5a6;
             color: white;
         }
 
         .btn-secondary:hover {
-            background: #5a6268;
+            background: #7f8c8d;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d68910;
         }
 
         .btn:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
-            transform: none !important;
         }
 
-        .table-container {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
+        .btn:disabled:hover {
+            background: initial;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .counter {
+            text-align: center;
+            padding: 12px;
+            background: #ecf0f1;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #5a6c7d;
+            margin-bottom: 16px;
+        }
+
+        .table-wrapper {
             overflow-x: auto;
-            max-height: 500px;
-            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-        }
-
-        thead {
-            position: sticky;
-            top: 0;
-            background: #f1f3f4;
-            z-index: 10;
-        }
-
-        th {
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-            color: #495057;
-            border-bottom: 2px solid #dee2e6;
-            font-size: 0.95em;
-        }
-
-        td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e9ecef;
+            background: white;
             font-size: 0.9em;
         }
 
-        tr:hover {
+        thead {
             background: #f8f9fa;
+            position: sticky;
+            top: 0;
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 500;
+            color: #5a6c7d;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tbody tr:hover {
+            background: #fafbfc;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
         }
 
         .checkbox-cell {
-            text-align: center;
             width: 50px;
+            text-align: center;
         }
 
         .checkbox-cell input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
             cursor: pointer;
+            width: 16px;
+            height: 16px;
         }
 
-        .nota-procesada {
-            font-weight: bold;
-            color: #28a745;
+        .text-center {
             text-align: center;
         }
 
-        .stats-badge {
+        .nota-badge {
             display: inline-block;
-            padding: 8px 15px;
-            background: #e3f2fd;
-            border: 1px solid #2196f3;
-            border-radius: 20px;
-            color: #1565c0;
-            font-weight: 600;
-            margin-top: 10px;
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            padding: 4px 12px;
+            background: #e8f5e9;
+            color: #27ae60;
+            border-radius: 3px;
             font-weight: 500;
         }
 
+        .alert {
+            padding: 12px 16px;
+            border-radius: 3px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            border-left: 3px solid;
+        }
+
         .alert-info {
-            background: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #1565c0;
         }
 
         .alert-success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #2e7d32;
         }
 
         .alert-warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
+            background: #fff3e0;
+            border-color: #ff9800;
+            color: #e65100;
         }
 
         .alert-danger {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
-
-        .preview-section {
-            margin-top: 20px;
+            background: #ffebee;
+            border-color: #f44336;
+            color: #c62828;
         }
 
         .hidden {
@@ -385,358 +360,329 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
         }
 
         .modal-content {
             background: white;
             margin: 5% auto;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 800px;
+            padding: 0;
+            max-width: 700px;
             max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            border-radius: 4px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
         }
 
         .modal-header {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #495057;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #667eea;
+            padding: 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .modal-header h2 {
+            font-size: 1.3em;
+            font-weight: 400;
+            color: #2c3e50;
         }
 
         .modal-body {
-            margin-bottom: 20px;
-            line-height: 1.6;
+            padding: 24px;
+            max-height: calc(80vh - 140px);
+            overflow-y: auto;
         }
 
         .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-
-        .code-block {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            overflow-x: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85em;
-        }
-
-        .highlight {
-            background: #fff3cd;
-            padding: 2px 5px;
-            border-radius: 3px;
+            padding: 16px 24px;
+            border-top: 1px solid #e0e0e0;
+            text-align: right;
         }
 
         .bookmarklet-box {
-            background: #fff3cd;
-            border: 2px dashed #ffc107;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
+            background: #fff9e6;
+            border: 1px dashed #f39c12;
+            border-radius: 4px;
+            padding: 24px;
             text-align: center;
+            margin: 20px 0;
         }
 
-        .bookmarklet-box h4 {
-            color: #856404;
-            margin-bottom: 15px;
-            font-size: 1.2em;
+        .bookmarklet-box h3 {
+            font-size: 1em;
+            font-weight: 500;
+            color: #5a6c7d;
+            margin-bottom: 16px;
         }
 
         .bookmarklet-link {
             display: inline-block;
-            padding: 15px 30px;
-            background: #ffc107;
-            color: #212529;
+            padding: 12px 28px;
+            background: #f39c12;
+            color: white;
             text-decoration: none;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 1.1em;
+            border-radius: 3px;
+            font-weight: 500;
+            transition: background 0.2s;
             cursor: move;
-            transition: all 0.3s;
         }
 
         .bookmarklet-link:hover {
-            background: #ffca2c;
-            transform: scale(1.05);
+            background: #d68910;
         }
 
-        .instruction-steps {
-            background: #e7f3ff;
-            border-left: 4px solid #2196f3;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 8px;
-        }
-
-        .instruction-steps h4 {
-            color: #1565c0;
-            margin-bottom: 15px;
-        }
-
-        .instruction-steps ol {
-            margin-left: 20px;
+        .instruction-list {
+            padding-left: 20px;
             line-height: 2;
         }
 
-        .instruction-steps li {
-            margin-bottom: 10px;
+        .instruction-list li {
+            margin-bottom: 8px;
         }
 
-        .tab-container {
-            margin-top: 20px;
-        }
-
-        .tab-buttons {
+        .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 2px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
         }
 
-        .tab-button {
-            flex: 1;
-            padding: 12px;
-            background: #e9ecef;
+        .tab {
+            padding: 12px 20px;
+            background: transparent;
             border: none;
-            border-radius: 8px 8px 0 0;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
+            font-size: 0.9em;
+            color: #7f8c8d;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
         }
 
-        .tab-button.active {
-            background: white;
-            color: #667eea;
-            border-bottom: 3px solid #667eea;
+        .tab:hover {
+            color: #2c3e50;
+        }
+
+        .tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
         }
 
         .tab-content {
             display: none;
-            padding: 20px;
-            background: white;
-            border-radius: 0 8px 8px 8px;
         }
 
         .tab-content.active {
             display: block;
         }
 
-        @media (max-width: 1024px) {
-            .main-content {
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #95a5a6;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 900px) {
+            .layout {
                 grid-template-columns: 1fr;
             }
         }
 
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 1.8em;
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
             }
 
-            .button-group {
-                flex-direction: column;
+            .card {
+                padding: 16px;
             }
 
-            .btn {
-                width: 100%;
+            .btn-group {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.5em;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🎓 SIGED · Carga Automática de Notas</h1>
-            <p>Sistema de carga selectiva con inyección automática en SIGED</p>
-        </div>
+        <header>
+            <h1>SIGED · Carga de Notas</h1>
+            <p class="subtitle">Sistema de carga automática para calificaciones</p>
+        </header>
 
-        <div class="main-content">
-            <!-- Panel de Control -->
-            <div class="panel">
-                <div class="panel-title">📂 Archivo CSV</div>
-                
-                <div class="file-upload">
-                    <div class="file-input-wrapper">
-                        <input type="file" id="csvFileInput" accept=".csv">
-                        <label for="csvFileInput" class="file-label">
-                            📁 Seleccionar CSV
-                        </label>
+        <div class="layout">
+            <!-- Sidebar -->
+            <aside>
+                <div class="card">
+                    <div class="card-title">Archivo CSV</div>
+                    
+                    <div class="file-upload">
+                        <input type="file" id="csvFile" class="file-input" accept=".csv">
+                        <label for="csvFile" class="file-label">Seleccionar archivo</label>
+                        <div class="file-name" id="fileName">Ningún archivo seleccionado</div>
                     </div>
-                    <div class="file-name" id="fileName">Ningún archivo seleccionado</div>
-                </div>
 
-                <div id="fileInfo" class="info-card hidden">
-                    <h3>📊 Información del Archivo</h3>
-                    <p id="formatoInfo"></p>
-                    <p id="estudiantesInfo"></p>
-                    <p id="actividadesInfo"></p>
-                </div>
-
-                <div id="actividadSelector" class="form-group hidden">
-                    <label for="actividadSelect">🎯 Seleccionar Actividad/Etapa:</label>
-                    <select id="actividadSelect">
-                        <option value="">Selecciona una actividad...</option>
-                    </select>
-                </div>
-
-                <div id="actividadStats" class="info-card hidden">
-                    <h3>📋 Detalles de la Actividad</h3>
-                    <p id="actividadNombre"></p>
-                    <p id="categoriaInfo"></p>
-                    <p id="estudiantesActividad"></p>
-                </div>
-
-                <div class="form-group">
-                    <label>⚙️ Formato de Notas:</label>
-                    <div class="radio-group">
-                        <label class="radio-option">
-                            <input type="radio" name="formato" value="redondear" checked>
-                            <span>🔄 Redondear (7.8 → 8)</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="formato" value="truncar">
-                            <span>✂️ Truncar (7.8 → 7)</span>
-                        </label>
+                    <div id="fileInfo" class="info-box hidden">
+                        <p id="formatoInfo"></p>
+                        <p id="estudiantesInfo"></p>
+                        <p id="actividadesInfo"></p>
                     </div>
                 </div>
 
-                <div id="tipoCalificacion" class="form-group hidden">
-                    <label>📝 Tipo de Calificación:</label>
-                    <div class="radio-group">
-                        <label class="radio-option">
-                            <input type="radio" name="tipo" value="individual" checked>
-                            <span>👤 Calificación Individual</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="tipo" value="equipo">
-                            <span>👥 Calificación por Equipo</span>
-                        </label>
+                <div class="card">
+                    <div class="card-title">Configuración</div>
+
+                    <div id="actividadGroup" class="form-group hidden">
+                        <label>Actividad</label>
+                        <select id="actividadSelect">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Formato de notas</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" name="formato" value="redondear" id="redondear" checked>
+                                <label for="redondear">Redondear (7.8 → 8)</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="formato" value="truncar" id="truncar">
+                                <label for="truncar">Truncar (7.8 → 7)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tipoGroup" class="form-group hidden">
+                        <label>Tipo de calificación</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" name="tipo" value="individual" id="individual" checked>
+                                <label for="individual">Individual</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="tipo" value="equipo" id="equipo">
+                                <label for="equipo">Por equipo</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="button-group">
-                    <button class="btn btn-success" id="btnSelectAll" disabled>✅ Todos</button>
-                    <button class="btn btn-danger" id="btnDeselectAll" disabled>❌ Ninguno</button>
+                <div class="card">
+                    <div class="card-title">Selección</div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" id="btnSelectAll" disabled>Todos</button>
+                        <button class="btn btn-secondary" id="btnDeselectAll" disabled>Ninguno</button>
+                    </div>
+
+                    <div class="counter" id="counter">
+                        0 seleccionados
+                    </div>
                 </div>
 
-                <div class="stats-badge" id="contadorSeleccionados">
-                    0 estudiantes seleccionados
+                <div class="card">
+                    <div class="card-title">Acciones</div>
+                    
+                    <button class="btn btn-success" id="btnExport" disabled>Exportar CSV</button>
+                    <button class="btn btn-warning" id="btnBookmarklet" disabled>Crear Bookmarklet</button>
+                    <button class="btn btn-primary" id="btnHelp">Instrucciones</button>
                 </div>
+            </aside>
 
-                <div style="margin-top: 20px;">
-                    <button class="btn btn-primary" id="btnActualizarVista" disabled>
-                        👁️ Actualizar Vista Previa
-                    </button>
-                </div>
+            <!-- Main Content -->
+            <main>
+                <div class="card">
+                    <div class="card-title">Estudiantes</div>
+                    
+                    <div id="alertBox"></div>
 
-                <div style="margin-top: 10px;">
-                    <button class="btn btn-success" id="btnExportarCSV" disabled>
-                        💾 Exportar CSV
-                    </button>
-                </div>
-
-                <div style="margin-top: 10px;">
-                    <button class="btn btn-warning" id="btnPrepararBookmarklet" disabled>
-                        ⭐ Preparar Bookmarklet
-                    </button>
-                </div>
-
-                <div style="margin-top: 10px;">
-                    <button class="btn btn-info" id="btnInstrucciones">
-                        📖 Ver Instrucciones
-                    </button>
-                </div>
-            </div>
-
-            <!-- Panel de Datos -->
-            <div class="panel">
-                <div class="panel-title">📚 Estudiantes de la Actividad</div>
-                
-                <div id="alertContainer"></div>
-
-                <div class="table-container">
-                    <table id="tablaEstudiantes">
-                        <thead>
-                            <tr>
-                                <th class="checkbox-cell">✓</th>
-                                <th>Nombre Completo</th>
-                                <th>Nota Original</th>
-                                <th>Nota Procesada</th>
-                                <th>Info Adicional</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tablaBody">
-                            <tr>
-                                <td colspan="5" style="text-align: center; padding: 40px; color: #6c757d;">
-                                    📂 Carga un archivo CSV para comenzar
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="preview-section">
-                    <div class="panel-title">👁️ Vista Previa Final</div>
-                    <div class="table-container">
-                        <table id="tablaPreview">
+                    <div class="table-wrapper">
+                        <table>
                             <thead>
                                 <tr>
+                                    <th class="checkbox-cell">
+                                        <input type="checkbox" id="selectAllCheckbox" disabled>
+                                    </th>
                                     <th>Nombre</th>
-                                    <th>Nota</th>
-                                    <th>Comentario</th>
+                                    <th class="text-center">Original</th>
+                                    <th class="text-center">Procesada</th>
+                                    <th>Información</th>
                                 </tr>
                             </thead>
-                            <tbody id="previewBody">
+                            <tbody id="tableBody">
                                 <tr>
-                                    <td colspan="3" style="text-align: center; padding: 20px; color: #6c757d;">
-                                        Selecciona estudiantes para ver la vista previa
+                                    <td colspan="5" class="empty-state">
+                                        <div class="empty-state-icon">📂</div>
+                                        <p>Carga un archivo CSV para comenzar</p>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
-            </div>
+
+                <div class="card">
+                    <div class="card-title">Vista Previa</div>
+                    
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th class="text-center">Nota</th>
+                                    <th>Comentario</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewBody">
+                                <tr>
+                                    <td colspan="3" class="empty-state">
+                                        <div class="empty-state-icon">👁️</div>
+                                        <p>Selecciona estudiantes para ver la vista previa</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
     <!-- Modal Bookmarklet -->
-    <div id="bookmarkletModal" class="modal">
+    <div id="modalBookmarklet" class="modal">
         <div class="modal-content">
-            <div class="modal-header">⭐ Bookmarklet para SIGED</div>
+            <div class="modal-header">
+                <h2>Bookmarklet para SIGED</h2>
+            </div>
             <div class="modal-body">
                 <div class="bookmarklet-box">
-                    <h4>📌 Arrastra este botón a tu barra de marcadores:</h4>
-                    <a href="" id="bookmarkletLink" class="bookmarklet-link">
-                        🚀 Cargar Notas SIGED
-                    </a>
-                    <p style="margin-top: 15px; font-size: 0.9em; color: #856404;">
-                        (Haz clic derecho → "Agregar a marcadores" si no puedes arrastrar)
+                    <h3>Arrastra este botón a tu barra de marcadores</h3>
+                    <a href="" id="bookmarkletLink" class="bookmarklet-link">Cargar Notas SIGED</a>
+                    <p style="margin-top: 12px; font-size: 0.85em; color: #7f8c8d;">
+                        O haz clic derecho y selecciona "Agregar a marcadores"
                     </p>
                 </div>
 
-                <div class="instruction-steps">
-                    <h4>📖 Instrucciones de Uso:</h4>
-                    <ol>
-                        <li><strong>Prepara tus datos:</strong> Carga el CSV y selecciona los estudiantes</li>
-                        <li><strong>Crea el bookmarklet:</strong> Arrastra el botón de arriba a tu barra de marcadores</li>
-                        <li><strong>Ve a SIGED:</strong> Inicia sesión y navega a la página de calificaciones</li>
-                        <li><strong>Ejecuta:</strong> Haz clic en el bookmarklet "🚀 Cargar Notas SIGED"</li>
-                        <li><strong>Verifica:</strong> Las notas se cargarán automáticamente</li>
-                        <li><strong>Guarda:</strong> Confirma los cambios en SIGED</li>
-                    </ol>
-                </div>
+                <h3 style="margin: 24px 0 12px; font-size: 1em; font-weight: 500;">Cómo usar</h3>
+                <ol class="instruction-list">
+                    <li>Prepara tus datos en esta página</li>
+                    <li>Arrastra el botón de arriba a tus marcadores</li>
+                    <li>Ve a SIGED (página de calificaciones)</li>
+                    <li>Haz clic en el marcador</li>
+                    <li>Las notas se cargarán automáticamente</li>
+                    <li>Verifica y guarda en SIGED</li>
+                </ol>
 
-                <div class="alert alert-warning">
-                    <strong>⚠️ Importante:</strong> Los datos se almacenan temporalmente en tu navegador (localStorage). 
-                    Si recargas esta página, necesitarás volver a cargar el CSV.
+                <div class="alert alert-warning" style="margin-top: 20px;">
+                    <strong>Nota:</strong> Los datos se guardan temporalmente en tu navegador.
                 </div>
             </div>
             <div class="modal-footer">
@@ -746,91 +692,81 @@
     </div>
 
     <!-- Modal Instrucciones -->
-    <div id="instruccionesModal" class="modal">
+    <div id="modalHelp" class="modal">
         <div class="modal-content">
-            <div class="modal-header">📖 Instrucciones Completas</div>
+            <div class="modal-header">
+                <h2>Instrucciones de Uso</h2>
+            </div>
             <div class="modal-body">
-                <div class="tab-container">
-                    <div class="tab-buttons">
-                        <button class="tab-button active" data-tab="metodo1">Método 1: Bookmarklet</button>
-                        <button class="tab-button" data-tab="metodo2">Método 2: Consola</button>
-                        <button class="tab-button" data-tab="metodo3">Método 3: Extensión</button>
-                    </div>
+                <div class="tabs">
+                    <button class="tab active" data-tab="tab1">Bookmarklet</button>
+                    <button class="tab" data-tab="tab2">Consola</button>
+                    <button class="tab" data-tab="tab3">Información</button>
+                </div>
 
-                    <div id="metodo1" class="tab-content active">
-                        <h3>⭐ Método 1: Bookmarklet (Recomendado)</h3>
-                        <p><strong>El más fácil y rápido</strong></p>
-                        
-                        <div class="instruction-steps">
-                            <h4>Pasos:</h4>
-                            <ol>
-                                <li>Carga tu archivo CSV aquí</li>
-                                <li>Selecciona la actividad y estudiantes</li>
-                                <li>Click en "⭐ Preparar Bookmarklet"</li>
-                                <li>Arrastra el botón generado a tu barra de marcadores</li>
-                                <li>Ve a SIGED y haz click en el marcador</li>
-                                <li>¡Listo! Las notas se cargan automáticamente</li>
-                            </ol>
-                        </div>
-
-                        <div class="alert alert-success">
-                            <strong>✅ Ventajas:</strong> Rápido, fácil, no requiere conocimientos técnicos
-                        </div>
-                    </div>
-
-                    <div id="metodo2" class="tab-content">
-                        <h3>💻 Método 2: Consola del Navegador</h3>
-                        <p><strong>Para usuarios con conocimientos técnicos</strong></p>
-                        
-                        <div class="instruction-steps">
-                            <h4>Pasos:</h4>
-                            <ol>
-                                <li>Carga tu archivo CSV y prepara los datos</li>
-                                <li>Ve a SIGED y abre la consola (F12)</li>
-                                <li>Copia el script generado en esta página</li>
-                                <li>Pega el script en la consola</li>
-                                <li>Presiona Enter</li>
-                                <li>Las notas se cargarán automáticamente</li>
-                            </ol>
-                        </div>
-
-                        <div class="alert alert-info">
-                            <strong>ℹ️ Nota:</strong> Este método funciona siempre, incluso si el bookmarklet tiene problemas
-                        </div>
-                    </div>
-
-                    <div id="metodo3" class="tab-content">
-                        <h3>🔌 Método 3: Extensión de Navegador</h3>
-                        <p><strong>Para uso frecuente y profesional</strong></p>
-                        
-                        <div class="instruction-steps">
-                            <h4>Próximamente:</h4>
-                            <ol>
-                                <li>Extensión Chrome/Firefox en desarrollo</li>
-                                <li>Integración directa con SIGED</li>
-                                <li>Guardado de configuraciones</li>
-                                <li>Historial de cargas</li>
-                            </ol>
-                        </div>
-
-                        <div class="alert alert-warning">
-                            <strong>🚧 En desarrollo:</strong> Esta funcionalidad estará disponible pronto
-                        </div>
+                <div id="tab1" class="tab-content active">
+                    <h3 style="margin-bottom: 16px; font-size: 1em; font-weight: 500;">Método Bookmarklet (Recomendado)</h3>
+                    <ol class="instruction-list">
+                        <li>Carga tu archivo CSV con las calificaciones</li>
+                        <li>Selecciona la actividad del menú desplegable</li>
+                        <li>Marca los estudiantes que deseas incluir</li>
+                        <li>Haz clic en "Crear Bookmarklet"</li>
+                        <li>Arrastra el botón generado a tu barra de marcadores</li>
+                        <li>Ve a SIGED y accede a la página de calificaciones</li>
+                        <li>Haz clic en el marcador para cargar las notas</li>
+                    </ol>
+                    <div class="alert alert-success" style="margin-top: 20px;">
+                        <strong>Ventaja:</strong> Método más rápido y fácil de usar.
                     </div>
                 </div>
 
-                <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                    <h4 style="margin-bottom: 15px;">🆘 ¿Problemas?</h4>
-                    <ul style="line-height: 2; margin-left: 20px;">
-                        <li>Asegúrate de estar en la página correcta de SIGED</li>
-                        <li>Verifica que has iniciado sesión</li>
-                        <li>Comprueba que la tabla de estudiantes está visible</li>
-                        <li>Si el bookmarklet no funciona, usa el método de consola</li>
-                    </ul>
+                <div id="tab2" class="tab-content">
+                    <h3 style="margin-bottom: 16px; font-size: 1em; font-weight: 500;">Método Consola del Navegador</h3>
+                    <ol class="instruction-list">
+                        <li>Prepara tus datos aquí como en el método anterior</li>
+                        <li>Ve a SIGED (página de calificaciones)</li>
+                        <li>Abre la consola del navegador (F12)</li>
+                        <li>Copia y pega el código JavaScript generado</li>
+                        <li>Presiona Enter para ejecutar</li>
+                        <li>Las notas se cargarán automáticamente</li>
+                    </ol>
+                    <div class="alert alert-info" style="margin-top: 20px;">
+                        <strong>Nota:</strong> Requiere conocimientos básicos de desarrollo web.
+                    </div>
+                </div>
+
+                <div id="tab3" class="tab-content">
+                    <h3 style="margin-bottom: 16px; font-size: 1em; font-weight: 500;">Formatos Soportados</h3>
+                    <p style="margin-bottom: 16px;">Esta aplicación soporta tres formatos de CSV:</p>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <strong>1. Gradebook Export</strong>
+                        <p style="color: #7f8c8d; font-size: 0.9em; margin-top: 4px;">
+                            Requiere: Nombre, Apellido, Título de la tarea, Calificación
+                        </p>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <strong>2. Calificaciones por Equipos v1</strong>
+                        <p style="color: #7f8c8d; font-size: 0.9em; margin-top: 4px;">
+                            Requiere: Estudiante, Calificacion_Individual, Categoria, Etapa
+                        </p>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <strong>3. Calificaciones por Equipos v2</strong>
+                        <p style="color: #7f8c8d; font-size: 0.9em; margin-top: 4px;">
+                            Requiere: Nombre, Nota_Individual, Nota_Equipo, Grupo
+                        </p>
+                    </div>
+
+                    <div class="alert alert-info" style="margin-top: 20px;">
+                        El formato se detecta automáticamente al cargar el archivo.
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" id="btnCloseInstrucciones">Cerrar</button>
+                <button class="btn btn-secondary" id="btnCloseHelp">Cerrar</button>
             </div>
         </div>
     </div>
@@ -843,7 +779,7 @@
         let datosActividadActual = [];
         let estudiantesUnicos = 0;
 
-        // ========== FUNCIONES DE NORMALIZACIÓN ==========
+        // ========== FUNCIONES AUXILIARES ==========
         function removeAccents(text) {
             return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         }
@@ -858,16 +794,13 @@
 
         function formatearNombreCompleto(nombreCompleto) {
             if (!nombreCompleto || nombreCompleto.trim() === "") return "";
-            
             const partes = nombreCompleto.trim().split(/\s+/);
-            if (partes.length === 1) {
-                return partes[0].toUpperCase();
-            } else if (partes.length >= 2) {
+            if (partes.length === 1) return partes[0].toUpperCase();
+            if (partes.length >= 2) {
                 const apellidos = partes.slice(0, -1).join(" ");
                 const nombre = partes[partes.length - 1];
                 return formatearNombre(apellidos, nombre);
             }
-            
             return nombreCompleto.trim();
         }
 
@@ -875,42 +808,31 @@
             if (!apellido && !nombre) return "";
             
             let apellidoFormateado = "";
-            if (apellido) {
-                apellidoFormateado = removeAccents(apellido.trim()).toUpperCase();
-            }
+            if (apellido) apellidoFormateado = removeAccents(apellido.trim()).toUpperCase();
             
             let nombreFormateado = "";
             if (nombre) {
                 nombreFormateado = nombre.trim();
                 if (nombreFormateado) {
-                    nombreFormateado = nombreFormateado[0].toUpperCase() + 
-                                     nombreFormateado.slice(1).toLowerCase();
+                    nombreFormateado = nombreFormateado[0].toUpperCase() + nombreFormateado.slice(1).toLowerCase();
                 }
             }
             
-            if (apellidoFormateado && nombreFormateado) {
-                return `${apellidoFormateado} ${nombreFormateado}`;
-            } else {
-                return apellidoFormateado || nombreFormateado;
-            }
+            return apellidoFormateado && nombreFormateado 
+                ? `${apellidoFormateado} ${nombreFormateado}` 
+                : apellidoFormateado || nombreFormateado;
         }
 
         function procesarCalificacion(calificacion, formato) {
             if (!calificacion) return "";
-            
             const calificacionStr = String(calificacion).trim();
-            
-            if (calificacionStr.toLowerCase() === 'faltante') {
-                return "1";
-            }
+            if (calificacionStr.toLowerCase() === 'faltante') return "1";
             
             try {
                 const notaFloat = parseFloat(calificacionStr.replace(',', '.'));
-                if (formato === 'redondear') {
-                    return String(Math.round(notaFloat));
-                } else {
-                    return String(Math.floor(notaFloat));
-                }
+                return formato === 'redondear' 
+                    ? String(Math.round(notaFloat)) 
+                    : String(Math.floor(notaFloat));
             } catch (e) {
                 return "";
             }
@@ -925,26 +847,13 @@
             }
         }
 
-        // ========== DETECCIÓN DE FORMATO CSV ==========
-        function detectarFormatoCSV(headers) {
-            const columnas = new Set(headers);
-            
-            const gradebookCols = new Set(['Nombre', 'Apellido', 'Título de la tarea', 'Calificación']);
-            const equiposV1Cols = new Set(['Estudiante', 'Calificacion_Individual', 'Categoria', 'Etapa']);
-            const equiposV2Cols = new Set(['Nombre', 'Nota_Individual', 'Nota_Equipo', 'Grupo']);
-            
-            if ([...gradebookCols].every(col => columnas.has(col))) {
-                return 'gradebook';
-            } else if ([...equiposV2Cols].every(col => columnas.has(col))) {
-                return 'equipos_v2';
-            } else if ([...equiposV1Cols].every(col => columnas.has(col))) {
-                return 'equipos_v1';
-            } else {
-                return 'desconocido';
-            }
+        function mostrarAlerta(tipo, mensaje) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
+            setTimeout(() => alertBox.innerHTML = '', 5000);
         }
 
-        // ========== PROCESAMIENTO DE CSV ==========
+        // ========== CSV PROCESSING ==========
         function parseCSV(text) {
             const lines = text.split('\n').filter(line => line.trim());
             if (lines.length < 2) return { headers: [], rows: [] };
@@ -964,9 +873,20 @@
             return { headers, rows };
         }
 
+        function detectarFormatoCSV(headers) {
+            const columnas = new Set(headers);
+            const gradebookCols = ['Nombre', 'Apellido', 'Título de la tarea', 'Calificación'];
+            const equiposV1Cols = ['Estudiante', 'Calificacion_Individual', 'Categoria', 'Etapa'];
+            const equiposV2Cols = ['Nombre', 'Nota_Individual', 'Nota_Equipo', 'Grupo'];
+            
+            if (gradebookCols.every(col => columnas.has(col))) return 'gradebook';
+            if (equiposV2Cols.every(col => columnas.has(col))) return 'equipos_v2';
+            if (equiposV1Cols.every(col => columnas.has(col))) return 'equipos_v1';
+            return 'desconocido';
+        }
+
         function procesarCSV(file) {
             const reader = new FileReader();
-            
             reader.onload = function(e) {
                 try {
                     const text = e.target.result;
@@ -981,74 +901,45 @@
                     formatoCSV = detectarFormatoCSV(headers);
                     
                     if (formatoCSV === 'desconocido') {
-                        mostrarAlerta('danger', 
-                            `Formato de CSV no reconocido.<br><br>
-                            <strong>Columnas encontradas:</strong> ${headers.join(', ')}`
-                        );
+                        mostrarAlerta('danger', 'Formato de CSV no reconocido.');
                         return;
                     }
                     
                     procesarSegunFormato();
                     actualizarInterfaz();
-                    
                 } catch (error) {
-                    mostrarAlerta('danger', `Error al procesar el archivo: ${error.message}`);
+                    mostrarAlerta('danger', `Error: ${error.message}`);
                 }
             };
-            
             reader.readAsText(file);
         }
 
         function procesarSegunFormato() {
             if (formatoCSV === 'gradebook') {
-                procesarGradebook();
+                const estudiantesSet = new Set();
+                datosCSV.forEach(row => {
+                    if (row['Nombre'] && row['Apellido']) {
+                        estudiantesSet.add(`${row['Apellido']}_${row['Nombre']}`);
+                    }
+                });
+                estudiantesUnicos = estudiantesSet.size;
+                const actividadesSet = new Set(datosCSV.map(row => row['Título de la tarea']).filter(Boolean));
+                actividadesDisponibles = Array.from(actividadesSet).sort();
             } else if (formatoCSV === 'equipos_v1') {
-                procesarEquiposV1();
+                estudiantesUnicos = new Set(datosCSV.map(row => row['Estudiante']).filter(Boolean)).size;
+                const actividadesSet = new Set();
+                datosCSV.forEach(row => {
+                    if (row['Etapa'] && row['Categoria']) {
+                        actividadesSet.add(`Etapa ${row['Etapa']} - ${row['Categoria']}`);
+                    }
+                });
+                actividadesDisponibles = Array.from(actividadesSet).sort();
             } else if (formatoCSV === 'equipos_v2') {
-                procesarEquiposV2();
+                estudiantesUnicos = new Set(datosCSV.map(row => row['Nombre']).filter(Boolean)).size;
+                actividadesDisponibles = Array.from(new Set(datosCSV.map(row => row['Grupo']).filter(Boolean))).sort();
             }
         }
 
-        function procesarGradebook() {
-            const estudiantesSet = new Set();
-            datosCSV.forEach(row => {
-                if (row['Nombre'] && row['Apellido']) {
-                    estudiantesSet.add(`${row['Apellido']}_${row['Nombre']}`);
-                }
-            });
-            estudiantesUnicos = estudiantesSet.size;
-            
-            const actividadesSet = new Set();
-            datosCSV.forEach(row => {
-                if (row['Título de la tarea']) {
-                    actividadesSet.add(row['Título de la tarea']);
-                }
-            });
-            actividadesDisponibles = Array.from(actividadesSet).sort();
-        }
-
-        function procesarEquiposV1() {
-            const estudiantesSet = new Set(datosCSV.map(row => row['Estudiante']).filter(Boolean));
-            estudiantesUnicos = estudiantesSet.size;
-            
-            const actividadesSet = new Set();
-            datosCSV.forEach(row => {
-                if (row['Etapa'] && row['Categoria']) {
-                    actividadesSet.add(`Etapa ${row['Etapa']} - ${row['Categoria']}`);
-                }
-            });
-            actividadesDisponibles = Array.from(actividadesSet).sort();
-        }
-
-        function procesarEquiposV2() {
-            const estudiantesSet = new Set(datosCSV.map(row => row['Nombre']).filter(Boolean));
-            estudiantesUnicos = estudiantesSet.size;
-            
-            const gruposSet = new Set(datosCSV.map(row => row['Grupo']).filter(Boolean));
-            actividadesDisponibles = Array.from(gruposSet).sort();
-        }
-
-        // ========== ACTUALIZACIÓN DE INTERFAZ ==========
         function actualizarInterfaz() {
             const formatoTexto = {
                 'gradebook': 'Gradebook Export',
@@ -1056,17 +947,13 @@
                 'equipos_v2': 'Calificaciones por Equipos (v2)'
             };
             
-            document.getElementById('formatoInfo').textContent = 
-                `📋 Formato: ${formatoTexto[formatoCSV]}`;
-            document.getElementById('estudiantesInfo').textContent = 
-                `👥 ${estudiantesUnicos} estudiantes únicos`;
-            document.getElementById('actividadesInfo').textContent = 
-                `📝 ${actividadesDisponibles.length} actividades encontradas`;
-            
+            document.getElementById('formatoInfo').textContent = `Formato: ${formatoTexto[formatoCSV]}`;
+            document.getElementById('estudiantesInfo').textContent = `${estudiantesUnicos} estudiantes`;
+            document.getElementById('actividadesInfo').textContent = `${actividadesDisponibles.length} actividades`;
             document.getElementById('fileInfo').classList.remove('hidden');
             
             const select = document.getElementById('actividadSelect');
-            select.innerHTML = '<option value="">Selecciona una actividad...</option>';
+            select.innerHTML = '<option value="">Seleccionar...</option>';
             actividadesDisponibles.forEach(actividad => {
                 const option = document.createElement('option');
                 option.value = actividad;
@@ -1074,24 +961,17 @@
                 select.appendChild(option);
             });
             
-            document.getElementById('actividadSelector').classList.remove('hidden');
+            document.getElementById('actividadGroup').classList.remove('hidden');
             
             if (formatoCSV === 'equipos_v1' || formatoCSV === 'equipos_v2') {
-                document.getElementById('tipoCalificacion').classList.remove('hidden');
-            } else {
-                document.getElementById('tipoCalificacion').classList.add('hidden');
+                document.getElementById('tipoGroup').classList.remove('hidden');
             }
             
-            mostrarAlerta('success', 
-                `✅ CSV cargado exitosamente (${formatoTexto[formatoCSV]})`
-            );
+            mostrarAlerta('success', 'CSV cargado correctamente');
         }
 
         function filtrarPorActividad(actividadSeleccionada) {
-            if (!actividadSeleccionada) {
-                datosActividadActual = [];
-                return;
-            }
+            if (!actividadSeleccionada) return;
             
             if (formatoCSV === 'gradebook') {
                 datosActividadActual = datosCSV.filter(row => 
@@ -1105,48 +985,24 @@
                     row['Etapa'] === etapa && row['Categoria'] === categoria
                 );
             } else if (formatoCSV === 'equipos_v2') {
-                datosActividadActual = datosCSV.filter(row =>
-                    row['Grupo'] === actividadSeleccionada
-                );
+                datosActividadActual = datosCSV.filter(row => row['Grupo'] === actividadSeleccionada);
             }
             
-            if (datosActividadActual.length > 0) {
-                document.getElementById('actividadNombre').textContent = 
-                    `📋 ${actividadSeleccionada}`;
-                
-                let categoria = 'N/A';
-                if (formatoCSV === 'gradebook' && datosActividadActual[0]['Categoría de calificación']) {
-                    categoria = datosActividadActual[0]['Categoría de calificación'];
-                } else if (formatoCSV === 'equipos_v1' && datosActividadActual[0]['Categoria']) {
-                    categoria = datosActividadActual[0]['Categoria'];
-                } else if (formatoCSV === 'equipos_v2') {
-                    categoria = 'Grupo';
-                }
-                
-                document.getElementById('categoriaInfo').textContent = 
-                    `🏷️ Categoría: ${categoria}`;
-                document.getElementById('estudiantesActividad').textContent = 
-                    `👥 Estudiantes: ${datosActividadActual.length}`;
-                
-                document.getElementById('actividadStats').classList.remove('hidden');
-            } else {
-                document.getElementById('actividadStats').classList.add('hidden');
-            }
-            
-            cargarTablaEstudiantes();
+            cargarTabla();
             actualizarContador();
             actualizarVistaPrevia();
         }
 
-        function cargarTablaEstudiantes() {
-            const tbody = document.getElementById('tablaBody');
+        function cargarTabla() {
+            const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             
             if (datosActividadActual.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="5" style="text-align: center; padding: 40px; color: #6c757d;">
-                            No hay datos para mostrar
+                        <td colspan="5" class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <p>No hay datos para mostrar</p>
                         </td>
                     </tr>
                 `;
@@ -1174,22 +1030,20 @@
                 
                 let nombreCompleto = '';
                 let calificacion = '';
-                let infoAdicional = '';
+                let info = '';
                 
                 if (formatoCSV === 'gradebook') {
                     nombreCompleto = formatearNombre(item['Apellido'], item['Nombre']);
                     calificacion = item['Calificación'];
-                    infoAdicional = `${item['Categoría de calificación'] || 'N/A'}`;
+                    info = item['Categoría de calificación'] || 'N/A';
                 } else if (formatoCSV === 'equipos_v1') {
                     nombreCompleto = formatearNombreCompleto(item['Estudiante']);
-                    calificacion = tipo === 'individual' ? 
-                        item['Calificacion_Individual'] : item['Calificacion_Equipo'];
-                    infoAdicional = `Equipo: ${item['Equipo'] || 'N/A'}`;
+                    calificacion = tipo === 'individual' ? item['Calificacion_Individual'] : item['Calificacion_Equipo'];
+                    info = `Equipo ${item['Equipo'] || 'N/A'}`;
                 } else if (formatoCSV === 'equipos_v2') {
                     nombreCompleto = formatearNombreCompleto(item['Nombre']);
-                    calificacion = tipo === 'individual' ? 
-                        item['Nota_Individual'] : item['Nota_Equipo'];
-                    infoAdicional = `Equipo: ${item['Equipo'] || 'N/A'}`;
+                    calificacion = tipo === 'individual' ? item['Nota_Individual'] : item['Nota_Equipo'];
+                    info = `Equipo ${item['Equipo'] || 'N/A'}`;
                 }
                 
                 const tdNombre = document.createElement('td');
@@ -1197,20 +1051,19 @@
                 tr.appendChild(tdNombre);
                 
                 const tdOriginal = document.createElement('td');
+                tdOriginal.className = 'text-center';
                 tdOriginal.textContent = calificacion;
-                tdOriginal.style.textAlign = 'center';
                 tr.appendChild(tdOriginal);
                 
                 const tdProcesada = document.createElement('td');
-                const notaProcesada = procesarCalificacion(calificacion, formato);
-                tdProcesada.textContent = notaProcesada;
-                tdProcesada.className = 'nota-procesada';
+                tdProcesada.className = 'text-center';
+                const nota = procesarCalificacion(calificacion, formato);
+                tdProcesada.innerHTML = `<span class="nota-badge">${nota}</span>`;
                 tr.appendChild(tdProcesada);
                 
                 const tdInfo = document.createElement('td');
-                tdInfo.textContent = infoAdicional;
-                tdInfo.style.fontSize = '0.85em';
-                tdInfo.style.color = '#6c757d';
+                tdInfo.textContent = info;
+                tdInfo.style.color = '#7f8c8d';
                 tr.appendChild(tdInfo);
                 
                 tbody.appendChild(tr);
@@ -1218,9 +1071,9 @@
             
             document.getElementById('btnSelectAll').disabled = false;
             document.getElementById('btnDeselectAll').disabled = false;
-            document.getElementById('btnActualizarVista').disabled = false;
-            document.getElementById('btnExportarCSV').disabled = false;
-            document.getElementById('btnPrepararBookmarklet').disabled = false;
+            document.getElementById('btnExport').disabled = false;
+            document.getElementById('btnBookmarklet').disabled = false;
+            document.getElementById('selectAllCheckbox').disabled = false;
         }
 
         function actualizarVistaPrevia() {
@@ -1232,8 +1085,9 @@
             if (seleccionados.length === 0) {
                 previewBody.innerHTML = `
                     <tr>
-                        <td colspan="3" style="text-align: center; padding: 20px; color: #6c757d;">
-                            Selecciona estudiantes para ver la vista previa
+                        <td colspan="3" class="empty-state">
+                            <div class="empty-state-icon">👁️</div>
+                            <p>Selecciona estudiantes para ver la vista previa</p>
                         </td>
                     </tr>
                 `;
@@ -1253,100 +1107,6 @@
                 if (formatoCSV === 'gradebook') {
                     nombreCompleto = formatearNombre(item['Apellido'], item['Nombre']);
                     calificacion = item['Calificación'];
-                    comentario = '';
-                } else if (formatoCSV === 'equipos_v1') {
-                    nombreCompleto = formatearNombreCompleto(item['Estudiante']);
-                    if (tipo === 'individual') {
-                        calificacion = item['Calificacion_Individual'];
-                        comentario = item['Comentarios_Individuales'] || '';
-                    } else {
-                        calificacion = item['Calificacion_Equipo'];
-                        comentario = item['Comentarios_Equipo'] || '';
-                    }
-                } else if (formatoCSV === 'equipos_v2') {
-                    nombreCompleto = formatearNombreCompleto(item['Nombre']);
-                    if (tipo === 'individual') {
-                        calificacion = item['Nota_Individual'];
-                        comentario = item['Comentario_Individual'] || '';
-                    } else {
-                        calificacion = item['Nota_Equipo'];
-                        comentario = item['Comentario_Equipo'] || '';
-                    }
-                }
-                
-                const notaProcesada = procesarCalificacion(calificacion, formato);
-                
-                const tdNombre = document.createElement('td');
-                tdNombre.textContent = nombreCompleto;
-                tr.appendChild(tdNombre);
-                
-                const tdNota = document.createElement('td');
-                tdNota.textContent = notaProcesada;
-                tdNota.style.textAlign = 'center';
-                tdNota.style.fontWeight = 'bold';
-                tdNota.style.color = '#28a745';
-                tdNota.style.background = '#e8f5e8';
-                tr.appendChild(tdNota);
-                
-                const tdComentario = document.createElement('td');
-                tdComentario.textContent = comentario;
-                tdComentario.style.background = '#f5f5f5';
-                tr.appendChild(tdComentario);
-                
-                previewBody.appendChild(tr);
-            });
-        }
-
-        function obtenerSeleccionados() {
-            const checkboxes = document.querySelectorAll('#tablaBody input[type="checkbox"]:checked');
-            return Array.from(checkboxes).map(cb => datosActividadActual[parseInt(cb.dataset.index)]);
-        }
-
-        function actualizarContador() {
-            const checkboxes = document.querySelectorAll('#tablaBody input[type="checkbox"]');
-            const checked = document.querySelectorAll('#tablaBody input[type="checkbox"]:checked');
-            
-            const contador = document.getElementById('contadorSeleccionados');
-            contador.textContent = `✓ ${checked.length} de ${checkboxes.length} estudiantes seleccionados`;
-            
-            const haySeleccionados = checked.length > 0;
-            document.getElementById('btnExportarCSV').disabled = !haySeleccionados;
-            document.getElementById('btnPrepararBookmarklet').disabled = !haySeleccionados;
-        }
-
-        function mostrarAlerta(tipo, mensaje) {
-            const container = document.getElementById('alertContainer');
-            container.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
-            
-            setTimeout(() => {
-                container.innerHTML = '';
-            }, 5000);
-        }
-
-        // ========== EXPORTAR CSV ==========
-        function exportarCSV() {
-            const seleccionados = obtenerSeleccionados();
-            
-            if (seleccionados.length === 0) {
-                mostrarAlerta('warning', 'No hay estudiantes seleccionados para exportar.');
-                return;
-            }
-            
-            const formato = document.querySelector('input[name="formato"]:checked').value;
-            const tipo = document.querySelector('input[name="tipo"]:checked').value;
-            const actividad = document.getElementById('actividadSelect').value;
-            
-            let csvContent = 'Nombre,Nota,Comentario\n';
-            
-            seleccionados.forEach(item => {
-                let nombreCompleto = '';
-                let calificacion = '';
-                let comentario = '';
-                
-                if (formatoCSV === 'gradebook') {
-                    nombreCompleto = formatearNombre(item['Apellido'], item['Nombre']);
-                    calificacion = item['Calificación'];
-                    comentario = '';
                 } else if (formatoCSV === 'equipos_v1') {
                     nombreCompleto = formatearNombreCompleto(item['Estudiante']);
                     if (tipo === 'individual') {
@@ -1368,32 +1128,96 @@
                 }
                 
                 const nota = procesarCalificacion(calificacion, formato);
-                nombreCompleto = nombreCompleto.replace(/"/g, '""');
-                comentario = comentario.replace(/"/g, '""');
                 
-                csvContent += `"${nombreCompleto}","${nota}","${comentario}"\n`;
+                const tdNombre = document.createElement('td');
+                tdNombre.textContent = nombreCompleto;
+                tr.appendChild(tdNombre);
+                
+                const tdNota = document.createElement('td');
+                tdNota.className = 'text-center';
+                tdNota.innerHTML = `<span class="nota-badge">${nota}</span>`;
+                tr.appendChild(tdNota);
+                
+                const tdComentario = document.createElement('td');
+                tdComentario.textContent = comentario;
+                tdComentario.style.color = '#7f8c8d';
+                tr.appendChild(tdComentario);
+                
+                previewBody.appendChild(tr);
+            });
+        }
+
+        function obtenerSeleccionados() {
+            const checkboxes = document.querySelectorAll('#tableBody input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => datosActividadActual[parseInt(cb.dataset.index)]);
+        }
+
+        function actualizarContador() {
+            const total = document.querySelectorAll('#tableBody input[type="checkbox"]').length;
+            const checked = document.querySelectorAll('#tableBody input[type="checkbox"]:checked').length;
+            document.getElementById('counter').textContent = `${checked} de ${total} seleccionados`;
+            
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            selectAllCheckbox.checked = checked === total && total > 0;
+            selectAllCheckbox.indeterminate = checked > 0 && checked < total;
+        }
+
+        function exportarCSV() {
+            const seleccionados = obtenerSeleccionados();
+            if (seleccionados.length === 0) {
+                mostrarAlerta('warning', 'No hay estudiantes seleccionados.');
+                return;
+            }
+            
+            const formato = document.querySelector('input[name="formato"]:checked').value;
+            const tipo = document.querySelector('input[name="tipo"]:checked').value;
+            const actividad = document.getElementById('actividadSelect').value;
+            
+            let csvContent = 'Nombre,Nota,Comentario\n';
+            
+            seleccionados.forEach(item => {
+                let nombreCompleto = '';
+                let calificacion = '';
+                let comentario = '';
+                
+                if (formatoCSV === 'gradebook') {
+                    nombreCompleto = formatearNombre(item['Apellido'], item['Nombre']);
+                    calificacion = item['Calificación'];
+                } else if (formatoCSV === 'equipos_v1') {
+                    nombreCompleto = formatearNombreCompleto(item['Estudiante']);
+                    if (tipo === 'individual') {
+                        calificacion = item['Calificacion_Individual'];
+                        comentario = item['Comentarios_Individuales'] || '';
+                    } else {
+                        calificacion = item['Calificacion_Equipo'];
+                        comentario = item['Comentarios_Equipo'] || '';
+                    }
+                } else if (formatoCSV === 'equipos_v2') {
+                    nombreCompleto = formatearNombreCompleto(item['Nombre']);
+                    if (tipo === 'individual') {
+                        calificacion = item['Nota_Individual'];
+                        comentario = item['Comentario_Individual'] || '';
+                    } else {
+                        calificacion = item['Nota_Equipo'];
+                        comentario = item['Comentario_Equipo'] || '';
+                    }
+                }
+                
+                const nota = procesarCalificacion(calificacion, formato);
+                csvContent += `"${nombreCompleto.replace(/"/g, '""')}","${nota}","${comentario.replace(/"/g, '""')}"\n`;
             });
             
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            
-            link.setAttribute('href', url);
-            link.setAttribute('download', `notas_${actividad.replace(/\s+/g, '_')}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
+            link.href = URL.createObjectURL(blob);
+            link.download = `notas_${actividad.replace(/\s+/g, '_')}.csv`;
             link.click();
-            document.body.removeChild(link);
             
-            mostrarAlerta('success', 
-                `✅ CSV exportado correctamente con ${seleccionados.length} estudiantes`
-            );
+            mostrarAlerta('success', 'CSV exportado correctamente');
         }
 
-        // ========== BOOKMARKLET ==========
-        function prepararBookmarklet() {
+        function crearBookmarklet() {
             const seleccionados = obtenerSeleccionados();
-            
             if (seleccionados.length === 0) {
                 mostrarAlerta('warning', 'No hay estudiantes seleccionados.');
                 return;
@@ -1410,7 +1234,6 @@
                 if (formatoCSV === 'gradebook') {
                     nombreCompleto = formatearNombre(item['Apellido'], item['Nombre']);
                     calificacion = item['Calificación'];
-                    comentario = '';
                 } else if (formatoCSV === 'equipos_v1') {
                     nombreCompleto = formatearNombreCompleto(item['Estudiante']);
                     if (tipo === 'individual') {
@@ -1432,33 +1255,29 @@
                 }
                 
                 if (nombreCompleto) {
-                    const entry = {
+                    entries.push({
                         tok: tokens(nombreCompleto),
                         nota: notaInt(calificacion),
                         com: comentario || ''
-                    };
-                    entries.push(entry);
+                    });
                 }
             });
             
-            // Guardar en localStorage
             localStorage.setItem('sigedNotas', JSON.stringify(entries));
             
-            // Generar bookmarklet
-            const bookmarkletCode = `javascript:(function(){var e=JSON.parse(localStorage.getItem('sigedNotas'));if(!e)return alert('⚠️ Datos no encontrados. Prepara el bookmarklet primero.');function t(e){return e.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^A-Z0-9 ]+/gi,' ').toUpperCase().split(/\\s+/).filter(Boolean).sort()}function n(e,t){for(let n of e)if(!t.includes(n))return!1;return!0}console.log('🚀 Iniciando carga de notas...');let o=0,r=0;for(let a=1;a<=60;a++){let l=String(a).padStart(4,'0'),s=document.getElementById('span_vFALUNOMCOM_'+l);if(!s)continue;o++;let i=t(s.innerText),c=e.find(e=>n(e.tok,i));if(!c)continue;r++,console.log('✅ '+s.innerText+' -> '+c.nota);let d=document.getElementById('vCALIFCOD_'+l);d&&(d.value=c.nota,d.dispatchEvent(new Event('change')));if(c.com){let u=document.getElementById('vLIBDCOMENTARIO_'+l);u&&(u.value=c.com)}}console.log('📈 '+r+' de '+o+' procesados');alert('✅ Notas cargadas: '+r+' estudiantes');})();`;
+            const bookmarkletCode = `javascript:(function(){var e=JSON.parse(localStorage.getItem('sigedNotas'));if(!e)return alert('⚠️ Datos no encontrados');function t(e){return e.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^A-Z0-9 ]+/gi,' ').toUpperCase().split(/\\s+/).filter(Boolean).sort()}function n(e,t){for(let n of e)if(!t.includes(n))return!1;return!0}let o=0,r=0;for(let a=1;a<=60;a++){let l=String(a).padStart(4,'0'),s=document.getElementById('span_vFALUNOMCOM_'+l);if(!s)continue;o++;let i=t(s.innerText),c=e.find(e=>n(e.tok,i));if(!c)continue;r++;let d=document.getElementById('vCALIFCOD_'+l);d&&(d.value=c.nota,d.dispatchEvent(new Event('change')));if(c.com){let u=document.getElementById('vLIBDCOMENTARIO_'+l);u&&(u.value=c.com)}}alert('✅ '+r+' notas cargadas');})();`;
             
-            // Mostrar modal con bookmarklet
             document.getElementById('bookmarkletLink').href = bookmarkletCode;
-            document.getElementById('bookmarkletModal').style.display = 'block';
+            document.getElementById('modalBookmarklet').style.display = 'block';
             
-            mostrarAlerta('success', '✅ Bookmarklet preparado! Arrastra el botón a tu barra de marcadores.');
+            mostrarAlerta('success', 'Bookmarklet preparado');
         }
 
         // ========== EVENT LISTENERS ==========
-        document.getElementById('csvFileInput').addEventListener('change', function(e) {
+        document.getElementById('csvFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                document.getElementById('fileName').textContent = `📄 ${file.name}`;
+                document.getElementById('fileName').textContent = file.name;
                 procesarCSV(file);
             }
         });
@@ -1467,72 +1286,57 @@
             filtrarPorActividad(e.target.value);
         });
 
-        document.querySelectorAll('input[name="formato"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                cargarTablaEstudiantes();
+        document.querySelectorAll('input[name="formato"], input[name="tipo"]').forEach(input => {
+            input.addEventListener('change', () => {
+                cargarTabla();
                 actualizarVistaPrevia();
             });
         });
 
-        document.querySelectorAll('input[name="tipo"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                cargarTablaEstudiantes();
-                actualizarVistaPrevia();
+        document.getElementById('selectAllCheckbox').addEventListener('change', function(e) {
+            document.querySelectorAll('#tableBody input[type="checkbox"]').forEach(cb => {
+                cb.checked = e.target.checked;
             });
+            actualizarContador();
+            actualizarVistaPrevia();
         });
 
         document.getElementById('btnSelectAll').addEventListener('click', () => {
-            document.querySelectorAll('#tablaBody input[type="checkbox"]').forEach(cb => {
-                cb.checked = true;
-            });
+            document.querySelectorAll('#tableBody input[type="checkbox"]').forEach(cb => cb.checked = true);
             actualizarContador();
             actualizarVistaPrevia();
         });
 
         document.getElementById('btnDeselectAll').addEventListener('click', () => {
-            document.querySelectorAll('#tablaBody input[type="checkbox"]').forEach(cb => {
-                cb.checked = false;
-            });
+            document.querySelectorAll('#tableBody input[type="checkbox"]').forEach(cb => cb.checked = false);
             actualizarContador();
             actualizarVistaPrevia();
         });
 
-        document.getElementById('btnActualizarVista').addEventListener('click', () => {
-            cargarTablaEstudiantes();
-            actualizarVistaPrevia();
-            mostrarAlerta('info', 'Vista previa actualizada');
-        });
-
-        document.getElementById('btnExportarCSV').addEventListener('click', exportarCSV);
-
-        document.getElementById('btnPrepararBookmarklet').addEventListener('click', prepararBookmarklet);
-
-        document.getElementById('btnInstrucciones').addEventListener('click', () => {
-            document.getElementById('instruccionesModal').style.display = 'block';
+        document.getElementById('btnExport').addEventListener('click', exportarCSV);
+        document.getElementById('btnBookmarklet').addEventListener('click', crearBookmarklet);
+        document.getElementById('btnHelp').addEventListener('click', () => {
+            document.getElementById('modalHelp').style.display = 'block';
         });
 
         document.getElementById('btnCloseBookmarklet').addEventListener('click', () => {
-            document.getElementById('bookmarkletModal').style.display = 'none';
+            document.getElementById('modalBookmarklet').style.display = 'none';
         });
 
-        document.getElementById('btnCloseInstrucciones').addEventListener('click', () => {
-            document.getElementById('instruccionesModal').style.display = 'none';
+        document.getElementById('btnCloseHelp').addEventListener('click', () => {
+            document.getElementById('modalHelp').style.display = 'none';
         });
 
-        // Tabs
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.addEventListener('click', () => {
-                const tabId = button.dataset.tab;
-                
-                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabId = this.dataset.tab;
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                
-                button.classList.add('active');
+                this.classList.add('active');
                 document.getElementById(tabId).classList.add('active');
             });
         });
 
-        // Cerrar modales al hacer clic fuera
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 e.target.style.display = 'none';
