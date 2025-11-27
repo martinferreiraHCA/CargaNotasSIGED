@@ -671,18 +671,40 @@
                     </p>
                 </div>
 
+                <div id="diagnosticoBox" class="info-box" style="margin-top: 20px;">
+                    <h3 style="margin-bottom: 12px; font-size: 0.95em; font-weight: 500; color: #2c3e50;">Estado del Bookmarklet</h3>
+                    <p id="estadoDatos">🔍 Verificando...</p>
+                    <p id="estadoEstudiantes"></p>
+                    <p id="estadoActividad"></p>
+                    <p id="estadoTimestamp"></p>
+                </div>
+
                 <h3 style="margin: 24px 0 12px; font-size: 1em; font-weight: 500;">Cómo usar</h3>
                 <ol class="instruction-list">
-                    <li>Prepara tus datos en esta página</li>
                     <li>Arrastra el botón de arriba a tus marcadores</li>
                     <li>Ve a SIGED (página de calificaciones)</li>
-                    <li>Haz clic en el marcador</li>
+                    <li>Haz clic en el marcador "Cargar Notas SIGED"</li>
                     <li>Las notas se cargarán automáticamente</li>
                     <li>Verifica y guarda en SIGED</li>
                 </ol>
 
                 <div class="alert alert-warning" style="margin-top: 20px;">
-                    <strong>Nota:</strong> Los datos se guardan temporalmente en tu navegador.
+                    <strong>⚠️ Importante:</strong> Los datos permanecen guardados en tu navegador hasta que:
+                    <ul style="margin: 8px 0 0 20px; line-height: 1.8;">
+                        <li>Borres el caché/cookies del navegador</li>
+                        <li>Navegues en modo incógnito</li>
+                        <li>Prepares un nuevo bookmarklet</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-info" style="margin-top: 12px;">
+                    <strong>💡 Consejo:</strong> Si ves el error "Datos no encontrados":
+                    <ul style="margin: 8px 0 0 20px; line-height: 1.8;">
+                        <li>Vuelve a esta página</li>
+                        <li>Haz clic en "Crear Bookmarklet" otra vez</li>
+                        <li>Verifica que dice "✅ Datos guardados" arriba</li>
+                        <li>Intenta de nuevo en SIGED</li>
+                    </ul>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1263,14 +1285,52 @@
                 }
             });
             
-            localStorage.setItem('sigedNotas', JSON.stringify(entries));
+            // Guardar con timestamp
+            const datosConTimestamp = {
+                datos: entries,
+                timestamp: Date.now(),
+                actividad: document.getElementById('actividadSelect').value
+            };
+            localStorage.setItem('sigedNotas', JSON.stringify(datosConTimestamp));
             
-            const bookmarkletCode = `javascript:(function(){var e=JSON.parse(localStorage.getItem('sigedNotas'));if(!e)return alert('⚠️ Datos no encontrados');function t(e){return e.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^A-Z0-9 ]+/gi,' ').toUpperCase().split(/\\s+/).filter(Boolean).sort()}function n(e,t){for(let n of e)if(!t.includes(n))return!1;return!0}let o=0,r=0;for(let a=1;a<=60;a++){let l=String(a).padStart(4,'0'),s=document.getElementById('span_vFALUNOMCOM_'+l);if(!s)continue;o++;let i=t(s.innerText),c=e.find(e=>n(e.tok,i));if(!c)continue;r++;let d=document.getElementById('vCALIFCOD_'+l);d&&(d.value=c.nota,d.dispatchEvent(new Event('change')));if(c.com){let u=document.getElementById('vLIBDCOMENTARIO_'+l);u&&(u.value=c.com)}}alert('✅ '+r+' notas cargadas');})();`;
+            // Generar bookmarklet con el código embebido
+            const bookmarkletCode = `javascript:(function(){try{var stored=localStorage.getItem('sigedNotas');if(!stored){alert('⚠️ Datos no encontrados.\\n\\nAsegúrate de:\\n1. Preparar el bookmarklet en la página primero\\n2. No cerrar el navegador después de prepararlo');return}var parsed=JSON.parse(stored);var e=parsed.datos||parsed;if(!e||!e.length){alert('⚠️ No hay datos de estudiantes');return}var timestamp=parsed.timestamp?new Date(parsed.timestamp).toLocaleString():'';var actividad=parsed.actividad||'';console.log('🚀 Cargando notas...');console.log('📊 Estudiantes: '+e.length);if(actividad)console.log('📋 Actividad: '+actividad);if(timestamp)console.log('🕐 Preparado: '+timestamp);function t(e){return e.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^A-Z0-9 ]+/gi,' ').toUpperCase().split(/\\s+/).filter(Boolean).sort()}function n(e,t){for(let n of e)if(!t.includes(n))return!1;return!0}var o=0,r=0,errores=[];for(var a=1;a<=60;a++){var l=String(a).padStart(4,'0'),s=document.getElementById('span_vFALUNOMCOM_'+l);if(!s)continue;o++;var i=t(s.innerText),c=e.find(function(e){return n(e.tok,i)});if(!c)continue;r++;console.log('✅ '+s.innerText+' -> Nota: '+c.nota);var d=document.getElementById('vCALIFCOD_'+l);if(d){d.value=c.nota;d.dispatchEvent(new Event('change'))}else{errores.push(s.innerText)}if(c.com){var u=document.getElementById('vLIBDCOMENTARIO_'+l);if(u){u.value=c.com;console.log('💬 Comentario: '+c.com)}}}console.log('📈 Procesados: '+r+' de '+o);if(errores.length>0)console.warn('⚠️ Campos no encontrados para: '+errores.join(', '));var msg='✅ Notas cargadas: '+r+' estudiantes';if(actividad)msg+='\\n📋 '+actividad;if(timestamp)msg+='\\n🕐 '+timestamp;alert(msg)}catch(err){console.error('❌ Error:',err);alert('❌ Error al cargar notas:\\n'+err.message+'\\n\\nAbre la consola (F12) para más detalles')}})();`;
             
             document.getElementById('bookmarkletLink').href = bookmarkletCode;
+            
+            // Mostrar diagnóstico
+            const verificacion = localStorage.getItem('sigedNotas');
+            if (verificacion) {
+                const parsed = JSON.parse(verificacion);
+                const datos = parsed.datos || parsed;
+                document.getElementById('estadoDatos').innerHTML = '✅ <strong>Datos guardados correctamente</strong>';
+                document.getElementById('estadoEstudiantes').textContent = `📊 ${datos.length} estudiantes listos`;
+                document.getElementById('estadoActividad').textContent = `📋 Actividad: ${parsed.actividad || 'N/A'}`;
+                document.getElementById('estadoTimestamp').textContent = `🕐 Preparado: ${parsed.timestamp ? new Date(parsed.timestamp).toLocaleString() : 'ahora'}`;
+            } else {
+                document.getElementById('estadoDatos').innerHTML = '❌ <strong>Error al guardar datos</strong>';
+                document.getElementById('estadoEstudiantes').textContent = '';
+                document.getElementById('estadoActividad').textContent = '';
+                document.getElementById('estadoTimestamp').textContent = '';
+            }
+            
             document.getElementById('modalBookmarklet').style.display = 'block';
             
-            mostrarAlerta('success', 'Bookmarklet preparado');
+            // Mostrar información de los datos guardados
+            const info = `Bookmarklet preparado con ${entries.length} estudiantes`;
+            mostrarAlerta('success', info);
+            
+            // Verificar inmediatamente que los datos están guardados
+            setTimeout(() => {
+                const verificacion = localStorage.getItem('sigedNotas');
+                if (verificacion) {
+                    console.log('✅ Datos guardados correctamente en localStorage');
+                    console.log('📦 Tamaño:', verificacion.length, 'caracteres');
+                } else {
+                    console.error('❌ Error: los datos no se guardaron');
+                    mostrarAlerta('danger', 'Error al guardar datos. Intenta de nuevo.');
+                }
+            }, 100);
         }
 
         // ========== EVENT LISTENERS ==========
