@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIGED · Carga de Notas</title>
+    <title>Política de Privacidad - SIGED Carga de Notas</title>
     <style>
         * {
             margin: 0;
@@ -12,1396 +12,295 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: #fafafa;
-            color: #2c3e50;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
+            color: #333;
+            background: #fafafa;
             padding: 20px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #e0e0e0;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         h1 {
-            font-size: 1.8em;
-            font-weight: 400;
             color: #2c3e50;
-            margin-bottom: 8px;
-        }
-
-        .subtitle {
-            color: #7f8c8d;
-            font-size: 0.9em;
-            font-weight: 300;
-        }
-
-        .layout {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        .card {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            padding: 24px;
-            margin-bottom: 20px;
-        }
-
-        .card-title {
-            font-size: 0.85em;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #7f8c8d;
-            margin-bottom: 16px;
-            font-weight: 500;
-        }
-
-        .file-upload {
-            position: relative;
-            margin-bottom: 20px;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .file-label {
-            display: block;
-            padding: 12px 20px;
-            background: #2c3e50;
-            color: white;
-            text-align: center;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-size: 0.9em;
-        }
-
-        .file-label:hover {
-            background: #34495e;
-        }
-
-        .file-name {
-            margin-top: 8px;
-            font-size: 0.85em;
-            color: #7f8c8d;
-            text-align: center;
-        }
-
-        .info-box {
-            background: #f8f9fa;
-            padding: 16px;
-            border-radius: 3px;
-            margin-bottom: 20px;
-            font-size: 0.9em;
-            line-height: 1.8;
-        }
-
-        .info-box p {
-            margin: 4px 0;
-            color: #5a6c7d;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            font-size: 0.85em;
-            color: #5a6c7d;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            font-size: 0.9em;
-            background: white;
-            color: #2c3e50;
-            cursor: pointer;
-            transition: border 0.2s;
-        }
-
-        select:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        .radio-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .radio-item {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .radio-item:hover {
-            background: #ecf0f1;
-        }
-
-        .radio-item input[type="radio"] {
-            margin-right: 10px;
-            cursor: pointer;
-        }
-
-        .radio-item label {
-            margin: 0;
-            cursor: pointer;
-            font-weight: 400;
-        }
-
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 3px;
-            font-size: 0.9em;
-            cursor: pointer;
-            transition: all 0.2s;
             margin-bottom: 10px;
-            font-weight: 500;
+            font-size: 2em;
         }
 
-        .btn-primary {
-            background: #3498db;
-            color: white;
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
         }
 
-        .btn-primary:hover {
-            background: #2980b9;
+        h3 {
+            color: #34495e;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
         }
 
-        .btn-success {
-            background: #27ae60;
-            color: white;
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
         }
 
-        .btn-success:hover {
-            background: #229954;
+        ul {
+            margin-bottom: 15px;
+            margin-left: 30px;
         }
 
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #7f8c8d;
-        }
-
-        .btn-warning {
-            background: #f39c12;
-            color: white;
-        }
-
-        .btn-warning:hover {
-            background: #d68910;
-        }
-
-        .btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-
-        .btn:disabled:hover {
-            background: initial;
-        }
-
-        .btn-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .counter {
-            text-align: center;
-            padding: 12px;
-            background: #ecf0f1;
-            border-radius: 3px;
-            font-size: 0.9em;
-            color: #5a6c7d;
-            margin-bottom: 16px;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            font-size: 0.9em;
-        }
-
-        thead {
-            background: #f8f9fa;
-            position: sticky;
-            top: 0;
-        }
-
-        th {
-            padding: 12px 16px;
-            text-align: left;
-            font-weight: 500;
-            color: #5a6c7d;
-            font-size: 0.85em;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        td {
-            padding: 12px 16px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        tbody tr:hover {
-            background: #fafbfc;
-        }
-
-        tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .checkbox-cell {
-            width: 50px;
-            text-align: center;
-        }
-
-        .checkbox-cell input[type="checkbox"] {
-            cursor: pointer;
-            width: 16px;
-            height: 16px;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .nota-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            background: #e8f5e9;
-            color: #27ae60;
-            border-radius: 3px;
-            font-weight: 500;
-        }
-
-        .alert {
-            padding: 12px 16px;
-            border-radius: 3px;
-            margin-bottom: 20px;
-            font-size: 0.9em;
-            border-left: 3px solid;
-        }
-
-        .alert-info {
-            background: #e3f2fd;
-            border-color: #2196f3;
-            color: #1565c0;
-        }
-
-        .alert-success {
-            background: #e8f5e9;
-            border-color: #4caf50;
-            color: #2e7d32;
-        }
-
-        .alert-warning {
-            background: #fff3e0;
-            border-color: #ff9800;
-            color: #e65100;
-        }
-
-        .alert-danger {
-            background: #ffebee;
-            border-color: #f44336;
-            color: #c62828;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-        }
-
-        .modal-content {
-            background: white;
-            margin: 5% auto;
-            padding: 0;
-            max-width: 700px;
-            max-height: 80vh;
-            overflow: hidden;
-            border-radius: 4px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .modal-header {
-            padding: 24px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .modal-header h2 {
-            font-size: 1.3em;
-            font-weight: 400;
-            color: #2c3e50;
-        }
-
-        .modal-body {
-            padding: 24px;
-            max-height: calc(80vh - 140px);
-            overflow-y: auto;
-        }
-
-        .modal-footer {
-            padding: 16px 24px;
-            border-top: 1px solid #e0e0e0;
-            text-align: right;
-        }
-
-        .bookmarklet-box {
-            background: #fff9e6;
-            border: 1px dashed #f39c12;
-            border-radius: 4px;
-            padding: 24px;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .bookmarklet-box h3 {
-            font-size: 1em;
-            font-weight: 500;
-            color: #5a6c7d;
-            margin-bottom: 16px;
-        }
-
-        .bookmarklet-link {
-            display: inline-block;
-            padding: 12px 28px;
-            background: #f39c12;
-            color: white;
-            text-decoration: none;
-            border-radius: 3px;
-            font-weight: 500;
-            transition: background 0.2s;
-            cursor: move;
-        }
-
-        .bookmarklet-link:hover {
-            background: #d68910;
-        }
-
-        .instruction-list {
-            padding-left: 20px;
-            line-height: 2;
-        }
-
-        .instruction-list li {
+        li {
             margin-bottom: 8px;
         }
 
-        .tabs {
-            display: flex;
-            gap: 2px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .tab {
-            padding: 12px 20px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-size: 0.9em;
-            color: #7f8c8d;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .tab:hover {
-            color: #2c3e50;
-        }
-
-        .tab.active {
-            color: #3498db;
-            border-bottom-color: #3498db;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .empty-state {
+        .header {
             text-align: center;
-            padding: 60px 20px;
-            color: #95a5a6;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #3498db;
         }
 
-        .empty-state-icon {
+        .icon {
             font-size: 3em;
-            margin-bottom: 16px;
+            margin-bottom: 10px;
         }
 
-        @media (max-width: 900px) {
-            .layout {
-                grid-template-columns: 1fr;
-            }
+        .last-updated {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-top: 10px;
         }
 
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
+        .highlight {
+            background: #e8f5e9;
+            padding: 15px;
+            border-left: 4px solid #4caf50;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
 
-            .card {
-                padding: 16px;
-            }
+        .contact {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
 
-            .btn-group {
-                grid-template-columns: 1fr;
-            }
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
 
-            h1 {
-                font-size: 1.5em;
-            }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            color: #7f8c8d;
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>SIGED · Carga de Notas</h1>
-            <p class="subtitle">Sistema de carga automática para calificaciones</p>
-        </header>
-
-        <div class="layout">
-            <!-- Sidebar -->
-            <aside>
-                <div class="card">
-                    <div class="card-title">Archivo CSV</div>
-                    
-                    <div class="file-upload">
-                        <input type="file" id="csvFile" class="file-input" accept=".csv">
-                        <label for="csvFile" class="file-label">Seleccionar archivo</label>
-                        <div class="file-name" id="fileName">Ningún archivo seleccionado</div>
-                    </div>
-
-                    <div id="fileInfo" class="info-box hidden">
-                        <p id="formatoInfo"></p>
-                        <p id="estudiantesInfo"></p>
-                        <p id="actividadesInfo"></p>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-title">Configuración</div>
-
-                    <div id="actividadGroup" class="form-group hidden">
-                        <label>Actividad</label>
-                        <select id="actividadSelect">
-                            <option value="">Seleccionar...</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Formato de notas</label>
-                        <div class="radio-group">
-                            <div class="radio-item">
-                                <input type="radio" name="formato" value="redondear" id="redondear" checked>
-                                <label for="redondear">Redondear (7.8 → 8)</label>
-                            </div>
-                            <div class="radio-item">
-                                <input type="radio" name="formato" value="truncar" id="truncar">
-                                <label for="truncar">Truncar (7.8 → 7)</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="tipoGroup" class="form-group hidden">
-                        <label>Tipo de calificación</label>
-                        <div class="radio-group">
-                            <div class="radio-item">
-                                <input type="radio" name="tipo" value="individual" id="individual" checked>
-                                <label for="individual">Individual</label>
-                            </div>
-                            <div class="radio-item">
-                                <input type="radio" name="tipo" value="equipo" id="equipo">
-                                <label for="equipo">Por equipo</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-title">Selección</div>
-                    
-                    <div class="btn-group">
-                        <button class="btn btn-secondary" id="btnSelectAll" disabled>Todos</button>
-                        <button class="btn btn-secondary" id="btnDeselectAll" disabled>Ninguno</button>
-                    </div>
-
-                    <div class="counter" id="counter">
-                        0 seleccionados
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-title">Acciones</div>
-                    
-                    <button class="btn btn-success" id="btnExport" disabled>Exportar CSV</button>
-                    <button class="btn btn-warning" id="btnBookmarklet" disabled>Crear Bookmarklet</button>
-                    <button class="btn btn-primary" id="btnHelp">Instrucciones</button>
-                </div>
-            </aside>
-
-            <!-- Main Content -->
-            <main>
-                <div class="card">
-                    <div class="card-title">Estudiantes</div>
-                    
-                    <div id="alertBox"></div>
-
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th class="checkbox-cell">
-                                        <input type="checkbox" id="selectAllCheckbox" disabled>
-                                    </th>
-                                    <th>Nombre</th>
-                                    <th class="text-center">Original</th>
-                                    <th class="text-center">Procesada</th>
-                                    <th>Información</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tableBody">
-                                <tr>
-                                    <td colspan="5" class="empty-state">
-                                        <div class="empty-state-icon">📂</div>
-                                        <p>Carga un archivo CSV para comenzar</p>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-title">Vista Previa</div>
-                    
-                    <div class="table-wrapper">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th class="text-center">Nota</th>
-                                    <th>Comentario</th>
-                                </tr>
-                            </thead>
-                            <tbody id="previewBody">
-                                <tr>
-                                    <td colspan="3" class="empty-state">
-                                        <div class="empty-state-icon">👁️</div>
-                                        <p>Selecciona estudiantes para ver la vista previa</p>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </main>
+        <div class="header">
+            <div class="icon">🔒</div>
+            <h1>Política de Privacidad</h1>
+            <p><strong>SIGED - Carga de Notas</strong></p>
+            <p class="last-updated">Última actualización: 27 de Noviembre de 2024</p>
         </div>
-    </div>
 
-    <!-- Modal Bookmarklet -->
-    <div id="modalBookmarklet" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Bookmarklet para SIGED</h2>
-            </div>
-            <div class="modal-body">
-                <div class="bookmarklet-box">
-                    <h3>Arrastra este botón a tu barra de marcadores</h3>
-                    <a href="" id="bookmarkletLink" class="bookmarklet-link">Cargar Notas SIGED</a>
-                    <p style="margin-top: 12px; font-size: 0.85em; color: #7f8c8d;">
-                        O haz clic derecho y selecciona "Agregar a marcadores"
-                    </p>
-                </div>
-
-                <div id="diagnosticoBox" class="info-box" style="margin-top: 20px;">
-                    <h3 style="margin-bottom: 12px; font-size: 0.95em; font-weight: 500; color: #2c3e50;">Estado del Bookmarklet</h3>
-                    <p id="estadoDatos">🔍 Verificando...</p>
-                    <p id="estadoEstudiantes"></p>
-                    <p id="estadoActividad"></p>
-                    <p id="estadoTimestamp"></p>
-                </div>
-
-                <h3 style="margin: 24px 0 12px; font-size: 1em; font-weight: 500;">Cómo usar</h3>
-                <ol class="instruction-list">
-                    <li>Arrastra el botón de arriba a tus marcadores</li>
-                    <li>Ve a SIGED (página de calificaciones)</li>
-                    <li>Haz clic en el marcador "Cargar Notas SIGED"</li>
-                    <li>Las notas se cargarán automáticamente</li>
-                    <li>Verifica y guarda en SIGED</li>
-                </ol>
-
-                <div class="alert alert-warning" style="margin-top: 20px;">
-                    <strong>⚠️ Importante:</strong> Los datos permanecen guardados en tu navegador hasta que:
-                    <ul style="margin: 8px 0 0 20px; line-height: 1.8;">
-                        <li>Borres el caché/cookies del navegador</li>
-                        <li>Navegues en modo incógnito</li>
-                        <li>Prepares un nuevo bookmarklet</li>
-                    </ul>
-                </div>
-
-                <div class="alert alert-info" style="margin-top: 12px;">
-                    <strong>💡 Consejo:</strong> Si ves el error "Datos no encontrados":
-                    <ul style="margin: 8px 0 0 20px; line-height: 1.8;">
-                        <li>Vuelve a esta página</li>
-                        <li>Haz clic en "Crear Bookmarklet" otra vez</li>
-                        <li>Verifica que dice "✅ Datos guardados" arriba</li>
-                        <li>Intenta de nuevo en SIGED</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="btnCloseBookmarklet">Cerrar</button>
-            </div>
+        <div class="highlight">
+            <strong>Resumen Ejecutivo:</strong> Esta extensión NO recopila, NO almacena, y NO transmite ningún dato personal o información de usuario. Todo el procesamiento se realiza localmente en tu dispositivo.
         </div>
-    </div>
 
-    <!-- Modal Instrucciones -->
-    <div id="modalHelp" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Instrucciones de Uso</h2>
-            </div>
-            <div class="modal-body">
-                <div class="tabs">
-                    <button class="tab active" data-tab="tab1">Bookmarklet</button>
-                    <button class="tab" data-tab="tab2">Consola</button>
-                    <button class="tab" data-tab="tab3">Información</button>
-                </div>
+        <h2>1. Información General</h2>
+        <p>
+            La extensión "SIGED - Carga de Notas" (en adelante, "la Extensión") ha sido desarrollada para facilitar 
+            la carga de calificaciones en el sistema SIGED desde archivos CSV. Esta política de privacidad describe 
+            cómo manejamos la información cuando utilizas nuestra Extensión.
+        </p>
 
-                <div id="tab1" class="tab-content active">
-                    <h3 style="margin-bottom: 16px; font-size: 1em; font-weight: 500;">Método Bookmarklet (Recomendado)</h3>
-                    <ol class="instruction-list">
-                        <li>Carga tu archivo CSV con las calificaciones</li>
-                        <li>Selecciona la actividad del menú desplegable</li>
-                        <li>Marca los estudiantes que deseas incluir</li>
-                        <li>Haz clic en "Crear Bookmarklet"</li>
-                        <li>Arrastra el botón generado a tu barra de marcadores</li>
-                        <li>Ve a SIGED y accede a la página de calificaciones</li>
-                        <li>Haz clic en el marcador para cargar las notas</li>
-                    </ol>
-                    <div class="alert alert-success" style="margin-top: 20px;">
-                        <strong>Ventaja:</strong> Método más rápido y fácil de usar.
-                    </div>
-                </div>
+        <h2>2. Información que NO Recopilamos</h2>
+        <p>La Extensión está diseñada con el principio de "privacidad por diseño". Específicamente:</p>
+        <ul>
+            <li><strong>NO recopilamos</strong> información personal identificable</li>
+            <li><strong>NO almacenamos</strong> datos de estudiantes o calificaciones</li>
+            <li><strong>NO transmitimos</strong> información a servidores externos</li>
+            <li><strong>NO rastreamos</strong> tu actividad de navegación</li>
+            <li><strong>NO utilizamos</strong> cookies de terceros</li>
+            <li><strong>NO compartimos</strong> datos con terceros</li>
+            <li><strong>NO vendemos</strong> información de usuario</li>
+            <li><strong>NO creamos</strong> perfiles de usuario</li>
+        </ul>
 
-                <div id="tab2" class="tab-content">
-                    <h3 style="margin-bottom: 16px; font-size: 1em; font-weight: 500;">Método Consola del Navegador</h3>
-                    <ol class="instruction-list">
-                        <li>Prepara tus datos aquí como en el método anterior</li>
-                        <li>Ve a SIGED (página de calificaciones)</li>
-                        <li>Abre la consola del navegador (F12)</li>
-                        <li>Copia y pega el código JavaScript generado</li>
-                        <li>Presiona Enter para ejecutar</li>
-                        <li>Las notas se cargarán automáticamente</li>
-                    </ol>
-                    <div class="alert alert-info" style="margin-top: 20px;">
-                        <strong>Nota:</strong> Requiere conocimientos básicos de desarrollo web.
-                    </div>
-                </div>
+        <h2>3. Procesamiento Local de Datos</h2>
+        <p>
+            Toda la funcionalidad de la Extensión opera completamente en tu navegador local:
+        </p>
 
-                <div id="tab3" class="tab-content">
-                    <h3 style="margin-bottom: 16px; font-size: 1em; font-weight: 500;">Formatos Soportados</h3>
-                    <p style="margin-bottom: 16px;">Esta aplicación soporta tres formatos de CSV:</p>
-                    
-                    <div style="margin-bottom: 20px;">
-                        <strong>1. Gradebook Export</strong>
-                        <p style="color: #7f8c8d; font-size: 0.9em; margin-top: 4px;">
-                            Requiere: Nombre, Apellido, Título de la tarea, Calificación
-                        </p>
-                    </div>
+        <h3>3.1 Archivos CSV</h3>
+        <ul>
+            <li>Los archivos CSV que cargas se procesan <strong>únicamente en tu dispositivo</strong></li>
+            <li>Los datos permanecen en la memoria de tu navegador durante el proceso</li>
+            <li>No se envían a ningún servidor remoto</li>
+            <li>Se eliminan automáticamente al cerrar la extensión</li>
+        </ul>
 
-                    <div style="margin-bottom: 20px;">
-                        <strong>2. Calificaciones por Equipos v1</strong>
-                        <p style="color: #7f8c8d; font-size: 0.9em; margin-top: 4px;">
-                            Requiere: Estudiante, Calificacion_Individual, Categoria, Etapa
-                        </p>
-                    </div>
+        <h3>3.2 Datos de Calificaciones</h3>
+        <ul>
+            <li>Las calificaciones se procesan localmente para formatearlas</li>
+            <li>Solo se insertan directamente en los campos de SIGED</li>
+            <li>No se guardan copias en ningún otro lugar</li>
+            <li>No se transmiten fuera del sitio oficial de SIGED</li>
+        </ul>
 
-                    <div style="margin-bottom: 20px;">
-                        <strong>3. Calificaciones por Equipos v2</strong>
-                        <p style="color: #7f8c8d; font-size: 0.9em; margin-top: 4px;">
-                            Requiere: Nombre, Nota_Individual, Nota_Equipo, Grupo
-                        </p>
-                    </div>
+        <h2>4. Permisos de la Extensión</h2>
+        <p>La Extensión solicita los siguientes permisos de Chrome, cada uno con su justificación:</p>
 
-                    <div class="alert alert-info" style="margin-top: 20px;">
-                        El formato se detecta automáticamente al cargar el archivo.
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="btnCloseHelp">Cerrar</button>
-            </div>
+        <h3>4.1 activeTab</h3>
+        <p>
+            <strong>Propósito:</strong> Permite a la extensión interactuar con la pestaña activa de SIGED.
+            <br>
+            <strong>Uso:</strong> Solo para leer y modificar los campos de calificación en SIGED.
+            <br>
+            <strong>Alcance:</strong> Solo funciona cuando estás en el sitio oficial de SIGED.
+        </p>
+
+        <h3>4.2 scripting</h3>
+        <p>
+            <strong>Propósito:</strong> Permite inyectar código en la página de SIGED.
+            <br>
+            <strong>Uso:</strong> Para automatizar el llenado de los campos de calificación.
+            <br>
+            <strong>Alcance:</strong> Solo en páginas de siged.com.uy.
+        </p>
+
+        <h3>4.3 host_permissions (siged.com.uy)</h3>
+        <p>
+            <strong>Propósito:</strong> Restringe la extensión a funcionar solo en SIGED.
+            <br>
+            <strong>Uso:</strong> Garantiza que la extensión no puede acceder a otros sitios web.
+            <br>
+            <strong>Seguridad:</strong> Protege tu privacidad limitando el alcance de la extensión.
+        </p>
+
+        <h2>5. Seguridad</h2>
+        <p>Implementamos las siguientes medidas de seguridad:</p>
+        <ul>
+            <li><strong>Restricción de dominio:</strong> La extensión solo funciona en siged.com.uy</li>
+            <li><strong>Sin comunicación externa:</strong> No hay conexiones a servidores externos</li>
+            <li><strong>Código local:</strong> Todo el procesamiento ocurre en tu dispositivo</li>
+            <li><strong>Sin analytics:</strong> No utilizamos servicios de análisis de terceros</li>
+            <li><strong>Código abierto:</strong> Puedes revisar el código fuente</li>
+        </ul>
+
+        <h2>6. Datos de SIGED</h2>
+        <p>
+            La Extensión interactúa con el sistema SIGED oficial, que tiene su propia política de privacidad. 
+            Nosotros no tenemos acceso ni control sobre cómo SIGED maneja los datos. Para información sobre 
+            la privacidad de datos en SIGED, consulta directamente con tu institución educativa.
+        </p>
+
+        <h2>7. Menores de Edad</h2>
+        <p>
+            Esta extensión está diseñada para uso exclusivo de docentes y personal educativo autorizado. 
+            No está dirigida a menores de 18 años. Si eres menor de edad, debes tener permiso de un adulto 
+            responsable para usar esta extensión.
+        </p>
+
+        <h2>8. Cambios a esta Política</h2>
+        <p>
+            Podemos actualizar esta política de privacidad ocasionalmente. Te notificaremos sobre cambios 
+            significativos mediante:
+        </p>
+        <ul>
+            <li>Actualización de la fecha de "Última actualización" en esta página</li>
+            <li>Notificación en la página de la extensión en Chrome Web Store</li>
+            <li>Actualización de la extensión con la nueva política</li>
+        </ul>
+        <p>
+            Te recomendamos revisar esta política periódicamente. El uso continuado de la Extensión después 
+            de cambios constituye tu aceptación de la política actualizada.
+        </p>
+
+        <h2>9. Consentimiento</h2>
+        <p>
+            Al instalar y utilizar la Extensión, aceptas esta política de privacidad. Si no estás de acuerdo 
+            con algún aspecto de esta política, por favor no instales o desinstala la Extensión.
+        </p>
+
+        <h2>10. Tus Derechos</h2>
+        <p>Como usuario, tienes los siguientes derechos:</p>
+        <ul>
+            <li><strong>Derecho a la información:</strong> Puedes solicitar información sobre qué datos procesamos (ninguno)</li>
+            <li><strong>Derecho de acceso:</strong> Puedes verificar que no almacenamos datos personales</li>
+            <li><strong>Derecho de eliminación:</strong> Puedes desinstalar la extensión en cualquier momento</li>
+            <li><strong>Derecho de oposición:</strong> Puedes dejar de usar la extensión cuando lo desees</li>
+            <li><strong>Derecho de portabilidad:</strong> Los datos CSV son tuyos y permanecen en tu dispositivo</li>
+        </ul>
+
+        <h2>11. Cumplimiento Legal</h2>
+        <p>Esta política de privacidad cumple con:</p>
+        <ul>
+            <li>Políticas de Chrome Web Store de Google</li>
+            <li>Principios de privacidad por diseño</li>
+            <li>Mejores prácticas de desarrollo de extensiones</li>
+            <li>Regulaciones de protección de datos aplicables</li>
+        </ul>
+
+        <h2>12. Transparencia</h2>
+        <p>
+            Nos comprometemos a la transparencia total. El código fuente de la Extensión está disponible 
+            para revisión, y puedes verificar que:
+        </p>
+        <ul>
+            <li>No hay llamadas a APIs externas</li>
+            <li>No hay código de rastreo o analytics</li>
+            <li>Todo el procesamiento es local</li>
+            <li>No se recopilan datos de usuario</li>
+        </ul>
+
+        <div class="contact">
+            <h2>13. Contacto</h2>
+            <p>
+                Si tienes preguntas, inquietudes o solicitudes relacionadas con esta política de privacidad, 
+                puedes contactarnos a través de:
+            </p>
+            <ul>
+                <li><strong>Desarrollador:</strong> Martín [Tu Apellido]</li>
+                <li><strong>Institución:</strong> Colegio y Liceo Hans Christian Andersen</li>
+                <li><strong>Ubicación:</strong> Sayago, Montevideo, Uruguay</li>
+                <li><strong>Email:</strong> [<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0d79782068606c64614d69626064636462236e6260">[email&#160;protected]</a>]</li>
+                <li><strong>Soporte:</strong> A través de la página de la extensión en Chrome Web Store</li>
+            </ul>
         </div>
-    </div>
 
-    <script>
-        // ========== VARIABLES GLOBALES ==========
-        let datosCSV = [];
-        let formatoCSV = '';
-        let actividadesDisponibles = [];
-        let datosActividadActual = [];
-        let estudiantesUnicos = 0;
+        <div class="highlight">
+            <h3>🔒 Compromiso de Privacidad</h3>
+            <p>
+                Nos comprometemos a proteger tu privacidad. Esta extensión fue diseñada específicamente 
+                para NO recopilar ningún dato. Creemos que las herramientas educativas deben respetar 
+                la privacidad de docentes y estudiantes por igual.
+            </p>
+        </div>
 
-        // ========== FUNCIONES AUXILIARES ==========
-        function removeAccents(text) {
-            return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        }
-
-        function tokens(text) {
-            const txt = removeAccents(text)
-                .replace(/[^A-Z0-9 ]+/gi, ' ')
-                .toUpperCase()
-                .trim();
-            return txt.split(/\s+/).filter(Boolean).sort();
-        }
-
-        function formatearNombreCompleto(nombreCompleto) {
-            if (!nombreCompleto || nombreCompleto.trim() === "") return "";
-            const partes = nombreCompleto.trim().split(/\s+/);
-            if (partes.length === 1) return partes[0].toUpperCase();
-            if (partes.length >= 2) {
-                const apellidos = partes.slice(0, -1).join(" ");
-                const nombre = partes[partes.length - 1];
-                return formatearNombre(apellidos, nombre);
-            }
-            return nombreCompleto.trim();
-        }
-
-        function formatearNombre(apellido, nombre) {
-            if (!apellido && !nombre) return "";
-            
-            let apellidoFormateado = "";
-            if (apellido) apellidoFormateado = removeAccents(apellido.trim()).toUpperCase();
-            
-            let nombreFormateado = "";
-            if (nombre) {
-                nombreFormateado = nombre.trim();
-                if (nombreFormateado) {
-                    nombreFormateado = nombreFormateado[0].toUpperCase() + nombreFormateado.slice(1).toLowerCase();
-                }
-            }
-            
-            return apellidoFormateado && nombreFormateado 
-                ? `${apellidoFormateado} ${nombreFormateado}` 
-                : apellidoFormateado || nombreFormateado;
-        }
-
-        function procesarCalificacion(calificacion, formato) {
-            if (!calificacion) return "";
-            const calificacionStr = String(calificacion).trim();
-            if (calificacionStr.toLowerCase() === 'faltante') return "1";
-            
-            try {
-                const notaFloat = parseFloat(calificacionStr.replace(',', '.'));
-                return formato === 'redondear' 
-                    ? String(Math.round(notaFloat)) 
-                    : String(Math.floor(notaFloat));
-            } catch (e) {
-                return "";
-            }
-        }
-
-        function notaInt(val) {
-            try {
-                const f = parseFloat(String(val).replace(',', '.'));
-                return Math.max(1, Math.min(10, Math.round(f)));
-            } catch (e) {
-                return 1;
-            }
-        }
-
-        function mostrarAlerta(tipo, mensaje) {
-            const alertBox = document.getElementById('alertBox');
-            alertBox.innerHTML = `<div class="alert alert-${tipo}">${mensaje}</div>`;
-            setTimeout(() => alertBox.innerHTML = '', 5000);
-        }
-
-        // ========== CSV PROCESSING ==========
-        function parseCSV(text) {
-            const lines = text.split('\n').filter(line => line.trim());
-            if (lines.length < 2) return { headers: [], rows: [] };
-            
-            const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-            const rows = [];
-            
-            for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-                const row = {};
-                headers.forEach((header, index) => {
-                    row[header] = values[index] || '';
-                });
-                rows.push(row);
-            }
-            
-            return { headers, rows };
-        }
-
-        function detectarFormatoCSV(headers) {
-            const columnas = new Set(headers);
-            const gradebookCols = ['Nombre', 'Apellido', 'Título de la tarea', 'Calificación'];
-            const equiposV1Cols = ['Estudiante', 'Calificacion_Individual', 'Categoria', 'Etapa'];
-            const equiposV2Cols = ['Nombre', 'Nota_Individual', 'Nota_Equipo', 'Grupo'];
-            
-            if (gradebookCols.every(col => columnas.has(col))) return 'gradebook';
-            if (equiposV2Cols.every(col => columnas.has(col))) return 'equipos_v2';
-            if (equiposV1Cols.every(col => columnas.has(col))) return 'equipos_v1';
-            return 'desconocido';
-        }
-
-        function procesarCSV(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const text = e.target.result;
-                    const { headers, rows } = parseCSV(text);
-                    
-                    if (headers.length === 0 || rows.length === 0) {
-                        mostrarAlerta('danger', 'El archivo CSV está vacío o tiene un formato incorrecto.');
-                        return;
-                    }
-                    
-                    datosCSV = rows;
-                    formatoCSV = detectarFormatoCSV(headers);
-                    
-                    if (formatoCSV === 'desconocido') {
-                        mostrarAlerta('danger', 'Formato de CSV no reconocido.');
-                        return;
-                    }
-                    
-                    procesarSegunFormato();
-                    actualizarInterfaz();
-                } catch (error) {
-                    mostrarAlerta('danger', `Error: ${error.message}`);
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function procesarSegunFormato() {
-            if (formatoCSV === 'gradebook') {
-                const estudiantesSet = new Set();
-                datosCSV.forEach(row => {
-                    if (row['Nombre'] && row['Apellido']) {
-                        estudiantesSet.add(`${row['Apellido']}_${row['Nombre']}`);
-                    }
-                });
-                estudiantesUnicos = estudiantesSet.size;
-                const actividadesSet = new Set(datosCSV.map(row => row['Título de la tarea']).filter(Boolean));
-                actividadesDisponibles = Array.from(actividadesSet).sort();
-            } else if (formatoCSV === 'equipos_v1') {
-                estudiantesUnicos = new Set(datosCSV.map(row => row['Estudiante']).filter(Boolean)).size;
-                const actividadesSet = new Set();
-                datosCSV.forEach(row => {
-                    if (row['Etapa'] && row['Categoria']) {
-                        actividadesSet.add(`Etapa ${row['Etapa']} - ${row['Categoria']}`);
-                    }
-                });
-                actividadesDisponibles = Array.from(actividadesSet).sort();
-            } else if (formatoCSV === 'equipos_v2') {
-                estudiantesUnicos = new Set(datosCSV.map(row => row['Nombre']).filter(Boolean)).size;
-                actividadesDisponibles = Array.from(new Set(datosCSV.map(row => row['Grupo']).filter(Boolean))).sort();
-            }
-        }
-
-        function actualizarInterfaz() {
-            const formatoTexto = {
-                'gradebook': 'Gradebook Export',
-                'equipos_v1': 'Calificaciones por Equipos (v1)',
-                'equipos_v2': 'Calificaciones por Equipos (v2)'
-            };
-            
-            document.getElementById('formatoInfo').textContent = `Formato: ${formatoTexto[formatoCSV]}`;
-            document.getElementById('estudiantesInfo').textContent = `${estudiantesUnicos} estudiantes`;
-            document.getElementById('actividadesInfo').textContent = `${actividadesDisponibles.length} actividades`;
-            document.getElementById('fileInfo').classList.remove('hidden');
-            
-            const select = document.getElementById('actividadSelect');
-            select.innerHTML = '<option value="">Seleccionar...</option>';
-            actividadesDisponibles.forEach(actividad => {
-                const option = document.createElement('option');
-                option.value = actividad;
-                option.textContent = actividad;
-                select.appendChild(option);
-            });
-            
-            document.getElementById('actividadGroup').classList.remove('hidden');
-            
-            if (formatoCSV === 'equipos_v1' || formatoCSV === 'equipos_v2') {
-                document.getElementById('tipoGroup').classList.remove('hidden');
-            }
-            
-            mostrarAlerta('success', 'CSV cargado correctamente');
-        }
-
-        function filtrarPorActividad(actividadSeleccionada) {
-            if (!actividadSeleccionada) return;
-            
-            if (formatoCSV === 'gradebook') {
-                datosActividadActual = datosCSV.filter(row => 
-                    row['Título de la tarea'] === actividadSeleccionada &&
-                    row['Calificación'] && row['Calificación'].trim() !== ''
-                );
-            } else if (formatoCSV === 'equipos_v1') {
-                const [etapaPart, categoria] = actividadSeleccionada.split(' - ');
-                const etapa = etapaPart.replace('Etapa ', '');
-                datosActividadActual = datosCSV.filter(row =>
-                    row['Etapa'] === etapa && row['Categoria'] === categoria
-                );
-            } else if (formatoCSV === 'equipos_v2') {
-                datosActividadActual = datosCSV.filter(row => row['Grupo'] === actividadSeleccionada);
-            }
-            
-            cargarTabla();
-            actualizarContador();
-            actualizarVistaPrevia();
-        }
-
-        function cargarTabla() {
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-            
-            if (datosActividadActual.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="empty-state">
-                            <div class="empty-state-icon">📭</div>
-                            <p>No hay datos para mostrar</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            const formato = document.querySelector('input[name="formato"]:checked').value;
-            const tipo = document.querySelector('input[name="tipo"]:checked').value;
-            
-            datosActividadActual.forEach((item, index) => {
-                const tr = document.createElement('tr');
-                
-                const tdCheck = document.createElement('td');
-                tdCheck.className = 'checkbox-cell';
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.checked = true;
-                checkbox.dataset.index = index;
-                checkbox.addEventListener('change', () => {
-                    actualizarContador();
-                    actualizarVistaPrevia();
-                });
-                tdCheck.appendChild(checkbox);
-                tr.appendChild(tdCheck);
-                
-                let nombreCompleto = '';
-                let calificacion = '';
-                let info = '';
-                
-                if (formatoCSV === 'gradebook') {
-                    nombreCompleto = formatearNombre(item['Apellido'], item['Nombre']);
-                    calificacion = item['Calificación'];
-                    info = item['Categoría de calificación'] || 'N/A';
-                } else if (formatoCSV === 'equipos_v1') {
-                    nombreCompleto = formatearNombreCompleto(item['Estudiante']);
-                    calificacion = tipo === 'individual' ? item['Calificacion_Individual'] : item['Calificacion_Equipo'];
-                    info = `Equipo ${item['Equipo'] || 'N/A'}`;
-                } else if (formatoCSV === 'equipos_v2') {
-                    nombreCompleto = formatearNombreCompleto(item['Nombre']);
-                    calificacion = tipo === 'individual' ? item['Nota_Individual'] : item['Nota_Equipo'];
-                    info = `Equipo ${item['Equipo'] || 'N/A'}`;
-                }
-                
-                const tdNombre = document.createElement('td');
-                tdNombre.textContent = nombreCompleto;
-                tr.appendChild(tdNombre);
-                
-                const tdOriginal = document.createElement('td');
-                tdOriginal.className = 'text-center';
-                tdOriginal.textContent = calificacion;
-                tr.appendChild(tdOriginal);
-                
-                const tdProcesada = document.createElement('td');
-                tdProcesada.className = 'text-center';
-                const nota = procesarCalificacion(calificacion, formato);
-                tdProcesada.innerHTML = `<span class="nota-badge">${nota}</span>`;
-                tr.appendChild(tdProcesada);
-                
-                const tdInfo = document.createElement('td');
-                tdInfo.textContent = info;
-                tdInfo.style.color = '#7f8c8d';
-                tr.appendChild(tdInfo);
-                
-                tbody.appendChild(tr);
-            });
-            
-            document.getElementById('btnSelectAll').disabled = false;
-            document.getElementById('btnDeselectAll').disabled = false;
-            document.getElementById('btnExport').disabled = false;
-            document.getElementById('btnBookmarklet').disabled = false;
-            document.getElementById('selectAllCheckbox').disabled = false;
-        }
-
-        function actualizarVistaPrevia() {
-            const previewBody = document.getElementById('previewBody');
-            previewBody.innerHTML = '';
-            
-            const seleccionados = obtenerSeleccionados();
-            
-            if (seleccionados.length === 0) {
-                previewBody.innerHTML = `
-                    <tr>
-                        <td colspan="3" class="empty-state">
-                            <div class="empty-state-icon">👁️</div>
-                            <p>Selecciona estudiantes para ver la vista previa</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            const formato = document.querySelector('input[name="formato"]:checked').value;
-            const tipo = document.querySelector('input[name="tipo"]:checked').value;
-            
-            seleccionados.forEach(item => {
-                const tr = document.createElement('tr');
-                
-                let nombreCompleto = '';
-                let calificacion = '';
-                let comentario = '';
-                
-                if (formatoCSV === 'gradebook') {
-                    nombreCompleto = formatearNombre(item['Apellido'], item['Nombre']);
-                    calificacion = item['Calificación'];
-                } else if (formatoCSV === 'equipos_v1') {
-                    nombreCompleto = formatearNombreCompleto(item['Estudiante']);
-                    if (tipo === 'individual') {
-                        calificacion = item['Calificacion_Individual'];
-                        comentario = item['Comentarios_Individuales'] || '';
-                    } else {
-                        calificacion = item['Calificacion_Equipo'];
-                        comentario = item['Comentarios_Equipo'] || '';
-                    }
-                } else if (formatoCSV === 'equipos_v2') {
-                    nombreCompleto = formatearNombreCompleto(item['Nombre']);
-                    if (tipo === 'individual') {
-                        calificacion = item['Nota_Individual'];
-                        comentario = item['Comentario_Individual'] || '';
-                    } else {
-                        calificacion = item['Nota_Equipo'];
-                        comentario = item['Comentario_Equipo'] || '';
-                    }
-                }
-                
-                const nota = procesarCalificacion(calificacion, formato);
-                
-                const tdNombre = document.createElement('td');
-                tdNombre.textContent = nombreCompleto;
-                tr.appendChild(tdNombre);
-                
-                const tdNota = document.createElement('td');
-                tdNota.className = 'text-center';
-                tdNota.innerHTML = `<span class="nota-badge">${nota}</span>`;
-                tr.appendChild(tdNota);
-                
-                const tdComentario = document.createElement('td');
-                tdComentario.textContent = comentario;
-                tdComentario.style.color = '#7f8c8d';
-                tr.appendChild(tdComentario);
-                
-                previewBody.appendChild(tr);
-            });
-        }
-
-        function obtenerSeleccionados() {
-            const checkboxes = document.querySelectorAll('#tableBody input[type="checkbox"]:checked');
-            return Array.from(checkboxes).map(cb => datosActividadActual[parseInt(cb.dataset.index)]);
-        }
-
-        function actualizarContador() {
-            const total = document.querySelectorAll('#tableBody input[type="checkbox"]').length;
-            const checked = document.querySelectorAll('#tableBody input[type="checkbox"]:checked').length;
-            document.getElementById('counter').textContent = `${checked} de ${total} seleccionados`;
-            
-            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-            selectAllCheckbox.checked = checked === total && total > 0;
-            selectAllCheckbox.indeterminate = checked > 0 && checked < total;
-        }
-
-        function exportarCSV() {
-            const seleccionados = obtenerSeleccionados();
-            if (seleccionados.length === 0) {
-                mostrarAlerta('warning', 'No hay estudiantes seleccionados.');
-                return;
-            }
-            
-            const formato = document.querySelector('input[name="formato"]:checked').value;
-            const tipo = document.querySelector('input[name="tipo"]:checked').value;
-            const actividad = document.getElementById('actividadSelect').value;
-            
-            let csvContent = 'Nombre,Nota,Comentario\n';
-            
-            seleccionados.forEach(item => {
-                let nombreCompleto = '';
-                let calificacion = '';
-                let comentario = '';
-                
-                if (formatoCSV === 'gradebook') {
-                    nombreCompleto = formatearNombre(item['Apellido'], item['Nombre']);
-                    calificacion = item['Calificación'];
-                } else if (formatoCSV === 'equipos_v1') {
-                    nombreCompleto = formatearNombreCompleto(item['Estudiante']);
-                    if (tipo === 'individual') {
-                        calificacion = item['Calificacion_Individual'];
-                        comentario = item['Comentarios_Individuales'] || '';
-                    } else {
-                        calificacion = item['Calificacion_Equipo'];
-                        comentario = item['Comentarios_Equipo'] || '';
-                    }
-                } else if (formatoCSV === 'equipos_v2') {
-                    nombreCompleto = formatearNombreCompleto(item['Nombre']);
-                    if (tipo === 'individual') {
-                        calificacion = item['Nota_Individual'];
-                        comentario = item['Comentario_Individual'] || '';
-                    } else {
-                        calificacion = item['Nota_Equipo'];
-                        comentario = item['Comentario_Equipo'] || '';
-                    }
-                }
-                
-                const nota = procesarCalificacion(calificacion, formato);
-                csvContent += `"${nombreCompleto.replace(/"/g, '""')}","${nota}","${comentario.replace(/"/g, '""')}"\n`;
-            });
-            
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `notas_${actividad.replace(/\s+/g, '_')}.csv`;
-            link.click();
-            
-            mostrarAlerta('success', 'CSV exportado correctamente');
-        }
-
-        function crearBookmarklet() {
-            const seleccionados = obtenerSeleccionados();
-            if (seleccionados.length === 0) {
-                mostrarAlerta('warning', 'No hay estudiantes seleccionados.');
-                return;
-            }
-            
-            const tipo = document.querySelector('input[name="tipo"]:checked').value;
-            const entries = [];
-            
-            seleccionados.forEach(item => {
-                let nombreCompleto = '';
-                let calificacion = '';
-                let comentario = '';
-                
-                if (formatoCSV === 'gradebook') {
-                    nombreCompleto = formatearNombre(item['Apellido'], item['Nombre']);
-                    calificacion = item['Calificación'];
-                } else if (formatoCSV === 'equipos_v1') {
-                    nombreCompleto = formatearNombreCompleto(item['Estudiante']);
-                    if (tipo === 'individual') {
-                        calificacion = item['Calificacion_Individual'];
-                        comentario = item['Comentarios_Individuales'] || '';
-                    } else {
-                        calificacion = item['Calificacion_Equipo'];
-                        comentario = item['Comentarios_Equipo'] || '';
-                    }
-                } else if (formatoCSV === 'equipos_v2') {
-                    nombreCompleto = formatearNombreCompleto(item['Nombre']);
-                    if (tipo === 'individual') {
-                        calificacion = item['Nota_Individual'];
-                        comentario = item['Comentario_Individual'] || '';
-                    } else {
-                        calificacion = item['Nota_Equipo'];
-                        comentario = item['Comentario_Equipo'] || '';
-                    }
-                }
-                
-                if (nombreCompleto) {
-                    entries.push({
-                        tok: tokens(nombreCompleto),
-                        nota: notaInt(calificacion),
-                        com: comentario || ''
-                    });
-                }
-            });
-            
-            // Guardar con timestamp
-            const datosConTimestamp = {
-                datos: entries,
-                timestamp: Date.now(),
-                actividad: document.getElementById('actividadSelect').value
-            };
-            localStorage.setItem('sigedNotas', JSON.stringify(datosConTimestamp));
-            
-            // Generar bookmarklet con el código embebido
-            const bookmarkletCode = `javascript:(function(){try{var stored=localStorage.getItem('sigedNotas');if(!stored){alert('⚠️ Datos no encontrados.\\n\\nAsegúrate de:\\n1. Preparar el bookmarklet en la página primero\\n2. No cerrar el navegador después de prepararlo');return}var parsed=JSON.parse(stored);var e=parsed.datos||parsed;if(!e||!e.length){alert('⚠️ No hay datos de estudiantes');return}var timestamp=parsed.timestamp?new Date(parsed.timestamp).toLocaleString():'';var actividad=parsed.actividad||'';console.log('🚀 Cargando notas...');console.log('📊 Estudiantes: '+e.length);if(actividad)console.log('📋 Actividad: '+actividad);if(timestamp)console.log('🕐 Preparado: '+timestamp);function t(e){return e.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^A-Z0-9 ]+/gi,' ').toUpperCase().split(/\\s+/).filter(Boolean).sort()}function n(e,t){for(let n of e)if(!t.includes(n))return!1;return!0}var o=0,r=0,errores=[];for(var a=1;a<=60;a++){var l=String(a).padStart(4,'0'),s=document.getElementById('span_vFALUNOMCOM_'+l);if(!s)continue;o++;var i=t(s.innerText),c=e.find(function(e){return n(e.tok,i)});if(!c)continue;r++;console.log('✅ '+s.innerText+' -> Nota: '+c.nota);var d=document.getElementById('vCALIFCOD_'+l);if(d){d.value=c.nota;d.dispatchEvent(new Event('change'))}else{errores.push(s.innerText)}if(c.com){var u=document.getElementById('vLIBDCOMENTARIO_'+l);if(u){u.value=c.com;console.log('💬 Comentario: '+c.com)}}}console.log('📈 Procesados: '+r+' de '+o);if(errores.length>0)console.warn('⚠️ Campos no encontrados para: '+errores.join(', '));var msg='✅ Notas cargadas: '+r+' estudiantes';if(actividad)msg+='\\n📋 '+actividad;if(timestamp)msg+='\\n🕐 '+timestamp;alert(msg)}catch(err){console.error('❌ Error:',err);alert('❌ Error al cargar notas:\\n'+err.message+'\\n\\nAbre la consola (F12) para más detalles')}})();`;
-            
-            document.getElementById('bookmarkletLink').href = bookmarkletCode;
-            
-            // Mostrar diagnóstico
-            const verificacion = localStorage.getItem('sigedNotas');
-            if (verificacion) {
-                const parsed = JSON.parse(verificacion);
-                const datos = parsed.datos || parsed;
-                document.getElementById('estadoDatos').innerHTML = '✅ <strong>Datos guardados correctamente</strong>';
-                document.getElementById('estadoEstudiantes').textContent = `📊 ${datos.length} estudiantes listos`;
-                document.getElementById('estadoActividad').textContent = `📋 Actividad: ${parsed.actividad || 'N/A'}`;
-                document.getElementById('estadoTimestamp').textContent = `🕐 Preparado: ${parsed.timestamp ? new Date(parsed.timestamp).toLocaleString() : 'ahora'}`;
-            } else {
-                document.getElementById('estadoDatos').innerHTML = '❌ <strong>Error al guardar datos</strong>';
-                document.getElementById('estadoEstudiantes').textContent = '';
-                document.getElementById('estadoActividad').textContent = '';
-                document.getElementById('estadoTimestamp').textContent = '';
-            }
-            
-            document.getElementById('modalBookmarklet').style.display = 'block';
-            
-            // Mostrar información de los datos guardados
-            const info = `Bookmarklet preparado con ${entries.length} estudiantes`;
-            mostrarAlerta('success', info);
-            
-            // Verificar inmediatamente que los datos están guardados
-            setTimeout(() => {
-                const verificacion = localStorage.getItem('sigedNotas');
-                if (verificacion) {
-                    console.log('✅ Datos guardados correctamente en localStorage');
-                    console.log('📦 Tamaño:', verificacion.length, 'caracteres');
-                } else {
-                    console.error('❌ Error: los datos no se guardaron');
-                    mostrarAlerta('danger', 'Error al guardar datos. Intenta de nuevo.');
-                }
-            }, 100);
-        }
-
-        // ========== EVENT LISTENERS ==========
-        document.getElementById('csvFile').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                document.getElementById('fileName').textContent = file.name;
-                procesarCSV(file);
-            }
-        });
-
-        document.getElementById('actividadSelect').addEventListener('change', function(e) {
-            filtrarPorActividad(e.target.value);
-        });
-
-        document.querySelectorAll('input[name="formato"], input[name="tipo"]').forEach(input => {
-            input.addEventListener('change', () => {
-                cargarTabla();
-                actualizarVistaPrevia();
-            });
-        });
-
-        document.getElementById('selectAllCheckbox').addEventListener('change', function(e) {
-            document.querySelectorAll('#tableBody input[type="checkbox"]').forEach(cb => {
-                cb.checked = e.target.checked;
-            });
-            actualizarContador();
-            actualizarVistaPrevia();
-        });
-
-        document.getElementById('btnSelectAll').addEventListener('click', () => {
-            document.querySelectorAll('#tableBody input[type="checkbox"]').forEach(cb => cb.checked = true);
-            actualizarContador();
-            actualizarVistaPrevia();
-        });
-
-        document.getElementById('btnDeselectAll').addEventListener('click', () => {
-            document.querySelectorAll('#tableBody input[type="checkbox"]').forEach(cb => cb.checked = false);
-            actualizarContador();
-            actualizarVistaPrevia();
-        });
-
-        document.getElementById('btnExport').addEventListener('click', exportarCSV);
-        document.getElementById('btnBookmarklet').addEventListener('click', crearBookmarklet);
-        document.getElementById('btnHelp').addEventListener('click', () => {
-            document.getElementById('modalHelp').style.display = 'block';
-        });
-
-        document.getElementById('btnCloseBookmarklet').addEventListener('click', () => {
-            document.getElementById('modalBookmarklet').style.display = 'none';
-        });
-
-        document.getElementById('btnCloseHelp').addEventListener('click', () => {
-            document.getElementById('modalHelp').style.display = 'none';
-        });
-
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                const tabId = this.dataset.tab;
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-                document.getElementById(tabId).classList.add('active');
-            });
-        });
-
-        window.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) {
-                e.target.style.display = 'none';
-            }
-        });
-    </script>
-</body>
-</html>
+        <div class="footer">
+            <p><strong>SIGED - Carga de Notas</strong></p>
+            <p>Versión 2.0 | Última actualización: 27 de Noviembre de 2024</p>
+            <p>Desar
