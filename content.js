@@ -226,13 +226,40 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
 
         return null;
     }
-    
+
+    /**
+     * Encuentra los top N mejores candidatos para un nombre de SIGED
+     * Útil para sugerencias cuando no hay match válido
+     * @param {string} nombreSiged - Nombre completo del estudiante en SIGED
+     * @param {Array} entries - Array de entries del CSV
+     * @param {number} topN - Cantidad de sugerencias a retornar
+     * @returns {Array} - Array de {entry, score, nombreOriginal} ordenados por score descendente
+     */
+    function findTopCandidates(nombreSiged, entries, topN = 3) {
+        const sigedTokens = tokens(nombreSiged);
+        const candidates = [];
+
+        for (const entry of entries) {
+            const result = calculateMatchScore(entry.tok, sigedTokens);
+            candidates.push({
+                entry: entry,
+                score: result.score,
+                nombreOriginal: entry.nombre || entry.tok.join(' ')
+            });
+        }
+
+        // Ordenar por score descendente y tomar los top N
+        candidates.sort((a, b) => b.score - a.score);
+        return candidates.slice(0, topN);
+    }
+
     // Buscar campos en la página
     let procesados = 0;
     let encontrados = 0;
     const errores = [];
     const coincidencias = [];
-    
+    const sinMatch = [];  // Estudiantes de SIGED sin match con sugerencias
+
     console.log('🔍 Buscando campos en la página...');
     
     for (let i = 1; i <= 60; i++) {
@@ -265,9 +292,26 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
         const matchResult = findBestMatch(entries, rowTok, 0.70);
 
         if (!matchResult) {
-            if (procesados <= 5) {
-                console.log(`⚠️ Sin match: "${nombreEnPagina}" [${rowTok.join(' ')}]`);
+            // No hay match válido - buscar sugerencias
+            const sugerencias = findTopCandidates(nombreEnPagina, entries, 3);
+
+            sinMatch.push({
+                nombre: nombreEnPagina,
+                tokens: rowTok,
+                sugerencias: sugerencias
+            });
+
+            console.log(`⚠️ Sin match: "${nombreEnPagina}" [${rowTok.join(' ')}]`);
+
+            // Mostrar sugerencias en consola
+            if (sugerencias.length > 0 && sugerencias[0].score > 0.4) {
+                console.log(`   💡 Sugerencias (requiere ≥70% para match automático):`);
+                sugerencias.forEach((sug, idx) => {
+                    const percent = (sug.score * 100).toFixed(1);
+                    console.log(`      ${idx + 1}. ${sug.nombreOriginal} (${percent}%)`);
+                });
             }
+
             continue;
         }
 
@@ -332,13 +376,44 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
     console.log('========== RESUMEN ==========');
     console.log(`📊 Filas procesadas: ${procesados}`);
     console.log(`✅ Coincidencias encontradas: ${encontrados}`);
+    console.log(`❌ Sin coincidencia: ${sinMatch.length}`);
     console.log(`📝 Entradas enviadas: ${entries.length}`);
     console.log(`⚠️ Errores: ${errores.length}`);
     console.log('============================');
-    
+
     if (errores.length > 0) {
         console.warn('⚠️ Errores encontrados:');
         errores.forEach(err => console.warn('  - ' + err));
+    }
+
+    // Mostrar sugerencias detalladas para estudiantes sin match
+    if (sinMatch.length > 0) {
+        console.log('');
+        console.log('========== SUGERENCIAS PARA ESTUDIANTES SIN MATCH ==========');
+        console.log(`Se encontraron ${sinMatch.length} estudiante(s) en SIGED sin match automático (requiere ≥70% similitud)`);
+        console.log('A continuación se muestran los candidatos más cercanos del CSV:');
+        console.log('');
+
+        sinMatch.forEach((item, idx) => {
+            console.log(`${idx + 1}. 🔴 SIGED: "${item.nombre}"`);
+
+            if (item.sugerencias.length > 0) {
+                console.log('   Candidatos del CSV:');
+                item.sugerencias.forEach((sug, sugIdx) => {
+                    const percent = (sug.score * 100).toFixed(1);
+                    const emoji = sug.score >= 0.60 ? '🟡' : sug.score >= 0.40 ? '🟠' : '⚪';
+                    console.log(`   ${emoji} ${sugIdx + 1}. ${sug.nombreOriginal} - Similitud: ${percent}%`);
+                });
+            } else {
+                console.log('   ⚠️ No hay candidatos cercanos en el CSV');
+            }
+            console.log('');
+        });
+
+        console.log('💡 TIP: Si alguna sugerencia es correcta, verifica:');
+        console.log('   - Que los nombres estén escritos correctamente en ambos sistemas');
+        console.log('   - Considera ajustar el umbral si hay muchos errores de ortografía');
+        console.log('============================================================');
     }
     
     if (encontrados === 0) {
@@ -360,11 +435,33 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
     }
     
     // Mostrar alerta de confirmación en la página
-    const resumen = `✅ NOTAS CARGADAS EN SIGED\n\n` +
+    let resumen = `✅ NOTAS CARGADAS EN SIGED\n\n` +
                   `📊 ${encontrados} de ${procesados} estudiantes procesados\n` +
-                  `📝 ${entries.length} entradas enviadas\n\n` +
-                  `⚠️ IMPORTANTE: Revisa las notas y haz clic en GUARDAR en SIGED`;
-    
+                  `📝 ${entries.length} entradas enviadas\n`;
+
+    // Agregar información sobre estudiantes sin match
+    if (sinMatch.length > 0) {
+        resumen += `\n❌ ${sinMatch.length} estudiante(s) en SIGED sin match\n`;
+        resumen += `💡 Revisa la consola (F12) para ver sugerencias\n`;
+
+        // Mostrar primeros 3 estudiantes sin match
+        const mostrar = Math.min(3, sinMatch.length);
+        resumen += `\nEstudiantes sin match:\n`;
+        for (let i = 0; i < mostrar; i++) {
+            resumen += `• ${sinMatch[i].nombre}\n`;
+            if (sinMatch[i].sugerencias.length > 0) {
+                const mejorSug = sinMatch[i].sugerencias[0];
+                const percent = (mejorSug.score * 100).toFixed(0);
+                resumen += `  Mejor candidato: ${mejorSug.nombreOriginal} (${percent}%)\n`;
+            }
+        }
+        if (sinMatch.length > 3) {
+            resumen += `... y ${sinMatch.length - 3} más\n`;
+        }
+    }
+
+    resumen += `\n⚠️ IMPORTANTE: Revisa las notas y haz clic en GUARDAR en SIGED`;
+
     alert(resumen);
     
     // Enviar respuesta exitosa
@@ -372,8 +469,10 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
         success: true,
         count: encontrados,
         processed: procesados,
+        unmatched: sinMatch.length,
         errors: errores,
-        matches: coincidencias
+        matches: coincidencias,
+        suggestions: sinMatch
     });
 }
 
