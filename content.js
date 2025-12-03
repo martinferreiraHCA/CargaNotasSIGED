@@ -134,64 +134,129 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
     }
 
     /**
-     * Calcula score de similitud entre dos conjuntos de tokens
-     * Estrategia: Para cada token del CSV, busca el mejor match en SIGED
-     * Retorna: { score, details } donde score es 0-1
+     * Calcula score en una dirección (source → target)
+     * Busca el mejor match para cada token de source en target
+     * @private
      */
-    function calculateMatchScore(csvTokens, sigedTokens) {
-        if (csvTokens.length === 0 || sigedTokens.length === 0) {
-            return { score: 0, details: [] };
-        }
-
+    function calculateDirectionalScore(sourceTokens, targetTokens) {
         const usedIndices = new Set();
         const details = [];
         let totalScore = 0;
 
-        // Para cada token del CSV, encontrar el mejor match en SIGED
-        for (const csvToken of csvTokens) {
-            const availableTokens = sigedTokens.map((t, i) =>
-                usedIndices.has(i) ? null : t
-            ).filter(t => t !== null);
-
-            if (availableTokens.length === 0) {
-                // No hay más tokens disponibles
-                details.push({
-                    csvToken,
-                    sigedToken: null,
-                    similarity: 0
-                });
-                continue;
-            }
-
-            const bestMatch = findBestTokenMatch(csvToken, sigedTokens, 0);
+        for (const sourceToken of sourceTokens) {
+            const bestMatch = findBestTokenMatch(sourceToken, targetTokens, 0);
 
             if (bestMatch.index !== -1) {
                 usedIndices.add(bestMatch.index);
                 totalScore += bestMatch.similarity;
                 details.push({
-                    csvToken,
-                    sigedToken: bestMatch.token,
+                    sourceToken,
+                    targetToken: bestMatch.token,
                     similarity: bestMatch.similarity
                 });
             } else {
                 details.push({
-                    csvToken,
-                    sigedToken: null,
+                    sourceToken,
+                    targetToken: null,
                     similarity: 0
                 });
             }
         }
 
-        // Score promedio
-        const avgScore = totalScore / csvTokens.length;
+        const avgScore = sourceTokens.length > 0 ? totalScore / sourceTokens.length : 0;
+        const matchedCount = usedIndices.size;
 
-        // Penalizar si hay muchos tokens extras en SIGED que no se usaron
-        const unmatchedRatio = (sigedTokens.length - usedIndices.size) / sigedTokens.length;
-        const penalty = unmatchedRatio * 0.1; // Penalización leve del 10% por tokens no usados
+        return { avgScore, matchedCount, details };
+    }
 
-        const finalScore = Math.max(0, avgScore - penalty);
+    /**
+     * Calcula score de similitud entre dos conjuntos de tokens
+     *
+     * MEJORA PARA NOMBRES PARCIALES:
+     * Maneja correctamente casos donde un sistema tiene más nombres/apellidos:
+     * - CSV: "GARCÍA PÉREZ JUAN PABLO" vs SIGED: "GARCÍA JUAN"
+     * - CSV: "RODRÍGUEZ MARÍA" vs SIGED: "RODRÍGUEZ GONZÁLEZ MARÍA JOSÉ"
+     *
+     * Estrategia bidireccional:
+     * 1. Calcula similitud CSV → SIGED
+     * 2. Calcula similitud SIGED → CSV
+     * 3. Usa scoring inteligente que favorece subsets de alta calidad
+     *
+     * @returns { score, details, direction } donde score es 0-1
+     */
+    function calculateMatchScore(csvTokens, sigedTokens) {
+        if (csvTokens.length === 0 || sigedTokens.length === 0) {
+            return { score: 0, details: [], direction: 'none' };
+        }
 
-        return { score: finalScore, details };
+        // Calcular scoring en ambas direcciones
+        const csvToSiged = calculateDirectionalScore(csvTokens, sigedTokens);
+        const sigedToCsv = calculateDirectionalScore(sigedTokens, csvTokens);
+
+        // Estrategia de scoring adaptativa:
+        // Si uno tiene significativamente más tokens, priorizar la dirección del más corto
+        const csvLen = csvTokens.length;
+        const sigedLen = sigedTokens.length;
+        const ratio = Math.max(csvLen, sigedLen) / Math.min(csvLen, sigedLen);
+
+        let finalScore, details, direction;
+
+        if (ratio <= 1.5) {
+            // Longitudes similares: usar promedio ponderado de ambas direcciones
+            const weight1 = 0.6;
+            const weight2 = 0.4;
+            finalScore = (csvToSiged.avgScore * weight1) + (sigedToCsv.avgScore * weight2);
+            details = csvToSiged.details;
+            direction = 'bidirectional';
+        } else {
+            // Diferencia significativa en longitud: usar la mejor dirección
+            // Esto favorece casos como "GARCÍA JUAN" matching "GARCÍA PÉREZ JUAN PABLO"
+
+            if (csvLen < sigedLen) {
+                // CSV más corto: priorizar que todos los tokens del CSV tengan match
+                // Ejemplo: CSV="GARCÍA JUAN" debe matchear bien con SIGED="GARCÍA PÉREZ JUAN PABLO"
+                finalScore = csvToSiged.avgScore;
+
+                // Bonus si todos los tokens del CSV tienen buen match
+                if (csvToSiged.matchedCount === csvLen && csvToSiged.avgScore >= 0.8) {
+                    finalScore = Math.min(1.0, finalScore * 1.1); // Bonus 10%
+                }
+
+                details = csvToSiged.details;
+                direction = 'csv-to-siged';
+            } else {
+                // SIGED más corto: priorizar que todos los tokens de SIGED tengan match
+                // Ejemplo: SIGED="GARCÍA JUAN" debe matchear bien con CSV="GARCÍA PÉREZ JUAN PABLO"
+                finalScore = sigedToCsv.avgScore;
+
+                // Bonus si todos los tokens de SIGED tienen buen match
+                if (sigedToCsv.matchedCount === sigedLen && sigedToCsv.avgScore >= 0.8) {
+                    finalScore = Math.min(1.0, finalScore * 1.1); // Bonus 10%
+                }
+
+                // Convertir details a formato esperado (desde perspectiva del CSV)
+                details = sigedToCsv.details.map(d => ({
+                    csvToken: d.targetToken,
+                    sigedToken: d.sourceToken,
+                    similarity: d.similarity
+                }));
+                direction = 'siged-to-csv';
+            }
+        }
+
+        // Penalización muy suave solo si NO hay ningún match decente
+        const hasGoodMatches = details.some(d => d.similarity >= 0.7);
+        if (!hasGoodMatches && details.length > 0) {
+            finalScore *= 0.9; // Penalización 10% si no hay ningún match decente
+        }
+
+        return {
+            score: Math.max(0, Math.min(1, finalScore)),
+            details,
+            direction,
+            csvLen,
+            sigedLen
+        };
     }
 
     /**
@@ -333,11 +398,20 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
 
         // Mostrar detalles si la similitud no es perfecta
         if (score < 0.95 && procesados <= 10) {
-            console.log(`  📊 Tokens CSV: [${match.tok.join(', ')}]`);
-            console.log(`  📊 Tokens SIGED: [${rowTok.join(', ')}]`);
+            console.log(`  📊 Tokens CSV (${match.tok.length}): [${match.tok.join(', ')}]`);
+            console.log(`  📊 Tokens SIGED (${rowTok.length}): [${rowTok.join(', ')}]`);
+
+            // Mostrar información sobre matching direccional si hay diferencia de longitud
+            if (matchResult.direction && match.tok.length !== rowTok.length) {
+                const diffInfo = match.tok.length < rowTok.length
+                    ? '📝 CSV tiene menos tokens → Match basado en subset'
+                    : '📝 SIGED tiene menos tokens → Match basado en subset';
+                console.log(`  ${diffInfo}`);
+            }
+
             if (matchResult.details) {
                 const detailsStr = matchResult.details
-                    .map(d => `${d.csvToken}≈${d.sigedToken || 'N/A'}(${(d.similarity * 100).toFixed(0)}%)`)
+                    .map(d => `${d.csvToken || d.sourceToken}≈${d.sigedToken || d.targetToken || 'N/A'}(${(d.similarity * 100).toFixed(0)}%)`)
                     .join(', ');
                 console.log(`  🔍 Detalles: ${detailsStr}`);
             }
