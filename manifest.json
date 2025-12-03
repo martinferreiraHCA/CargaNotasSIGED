@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "SIGED - Carga de Notas",
+  "version": "2.1",
+  "description": "Carga automática de notas en SIGED desde archivos CSV",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://siged3.siged.com.uy/*",
+    "https://*.siged.com.uy/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://siged3.siged.com.uy/*",
+        "https://*.siged.com.uy/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
