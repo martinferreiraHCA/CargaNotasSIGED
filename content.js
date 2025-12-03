@@ -134,64 +134,129 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
     }
 
     /**
-     * Calcula score de similitud entre dos conjuntos de tokens
-     * Estrategia: Para cada token del CSV, busca el mejor match en SIGED
-     * Retorna: { score, details } donde score es 0-1
+     * Calcula score en una dirección (source → target)
+     * Busca el mejor match para cada token de source en target
+     * @private
      */
-    function calculateMatchScore(csvTokens, sigedTokens) {
-        if (csvTokens.length === 0 || sigedTokens.length === 0) {
-            return { score: 0, details: [] };
-        }
-
+    function calculateDirectionalScore(sourceTokens, targetTokens) {
         const usedIndices = new Set();
         const details = [];
         let totalScore = 0;
 
-        // Para cada token del CSV, encontrar el mejor match en SIGED
-        for (const csvToken of csvTokens) {
-            const availableTokens = sigedTokens.map((t, i) =>
-                usedIndices.has(i) ? null : t
-            ).filter(t => t !== null);
-
-            if (availableTokens.length === 0) {
-                // No hay más tokens disponibles
-                details.push({
-                    csvToken,
-                    sigedToken: null,
-                    similarity: 0
-                });
-                continue;
-            }
-
-            const bestMatch = findBestTokenMatch(csvToken, sigedTokens, 0);
+        for (const sourceToken of sourceTokens) {
+            const bestMatch = findBestTokenMatch(sourceToken, targetTokens, 0);
 
             if (bestMatch.index !== -1) {
                 usedIndices.add(bestMatch.index);
                 totalScore += bestMatch.similarity;
                 details.push({
-                    csvToken,
-                    sigedToken: bestMatch.token,
+                    sourceToken,
+                    targetToken: bestMatch.token,
                     similarity: bestMatch.similarity
                 });
             } else {
                 details.push({
-                    csvToken,
-                    sigedToken: null,
+                    sourceToken,
+                    targetToken: null,
                     similarity: 0
                 });
             }
         }
 
-        // Score promedio
-        const avgScore = totalScore / csvTokens.length;
+        const avgScore = sourceTokens.length > 0 ? totalScore / sourceTokens.length : 0;
+        const matchedCount = usedIndices.size;
 
-        // Penalizar si hay muchos tokens extras en SIGED que no se usaron
-        const unmatchedRatio = (sigedTokens.length - usedIndices.size) / sigedTokens.length;
-        const penalty = unmatchedRatio * 0.1; // Penalización leve del 10% por tokens no usados
+        return { avgScore, matchedCount, details };
+    }
 
-        const finalScore = Math.max(0, avgScore - penalty);
+    /**
+     * Calcula score de similitud entre dos conjuntos de tokens
+     *
+     * MEJORA PARA NOMBRES PARCIALES:
+     * Maneja correctamente casos donde un sistema tiene más nombres/apellidos:
+     * - CSV: "GARCÍA PÉREZ JUAN PABLO" vs SIGED: "GARCÍA JUAN"
+     * - CSV: "RODRÍGUEZ MARÍA" vs SIGED: "RODRÍGUEZ GONZÁLEZ MARÍA JOSÉ"
+     *
+     * Estrategia bidireccional:
+     * 1. Calcula similitud CSV → SIGED
+     * 2. Calcula similitud SIGED → CSV
+     * 3. Usa scoring inteligente que favorece subsets de alta calidad
+     *
+     * @returns { score, details, direction } donde score es 0-1
+     */
+    function calculateMatchScore(csvTokens, sigedTokens) {
+        if (csvTokens.length === 0 || sigedTokens.length === 0) {
+            return { score: 0, details: [], direction: 'none' };
+        }
 
-        return { score: finalScore, details };
+        // Calcular scoring en ambas direcciones
+        const csvToSiged = calculateDirectionalScore(csvTokens, sigedTokens);
+        const sigedToCsv = calculateDirectionalScore(sigedTokens, csvTokens);
+
+        // Estrategia de scoring adaptativa:
+        // Si uno tiene significativamente más tokens, priorizar la dirección del más corto
+        const csvLen = csvTokens.length;
+        const sigedLen = sigedTokens.length;
+        const ratio = Math.max(csvLen, sigedLen) / Math.min(csvLen, sigedLen);
+
+        let finalScore, details, direction;
+
+        if (ratio <= 1.5) {
+            // Longitudes similares: usar promedio ponderado de ambas direcciones
+            const weight1 = 0.6;
+            const weight2 = 0.4;
+            finalScore = (csvToSiged.avgScore * weight1) + (sigedToCsv.avgScore * weight2);
+            details = csvToSiged.details;
+            direction = 'bidirectional';
+        } else {
+            // Diferencia significativa en longitud: usar la mejor dirección
+            // Esto favorece casos como "GARCÍA JUAN" matching "GARCÍA PÉREZ JUAN PABLO"
+
+            if (csvLen < sigedLen) {
+                // CSV más corto: priorizar que todos los tokens del CSV tengan match
+                // Ejemplo: CSV="GARCÍA JUAN" debe matchear bien con SIGED="GARCÍA PÉREZ JUAN PABLO"
+                finalScore = csvToSiged.avgScore;
+
+                // Bonus si todos los tokens del CSV tienen buen match
+                if (csvToSiged.matchedCount === csvLen && csvToSiged.avgScore >= 0.8) {
+                    finalScore = Math.min(1.0, finalScore * 1.1); // Bonus 10%
+                }
+
+                details = csvToSiged.details;
+                direction = 'csv-to-siged';
+            } else {
+                // SIGED más corto: priorizar que todos los tokens de SIGED tengan match
+                // Ejemplo: SIGED="GARCÍA JUAN" debe matchear bien con CSV="GARCÍA PÉREZ JUAN PABLO"
+                finalScore = sigedToCsv.avgScore;
+
+                // Bonus si todos los tokens de SIGED tienen buen match
+                if (sigedToCsv.matchedCount === sigedLen && sigedToCsv.avgScore >= 0.8) {
+                    finalScore = Math.min(1.0, finalScore * 1.1); // Bonus 10%
+                }
+
+                // Convertir details a formato esperado (desde perspectiva del CSV)
+                details = sigedToCsv.details.map(d => ({
+                    csvToken: d.targetToken,
+                    sigedToken: d.sourceToken,
+                    similarity: d.similarity
+                }));
+                direction = 'siged-to-csv';
+            }
+        }
+
+        // Penalización muy suave solo si NO hay ningún match decente
+        const hasGoodMatches = details.some(d => d.similarity >= 0.7);
+        if (!hasGoodMatches && details.length > 0) {
+            finalScore *= 0.9; // Penalización 10% si no hay ningún match decente
+        }
+
+        return {
+            score: Math.max(0, Math.min(1, finalScore)),
+            details,
+            direction,
+            csvLen,
+            sigedLen
+        };
     }
 
     /**
@@ -226,13 +291,40 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
 
         return null;
     }
-    
+
+    /**
+     * Encuentra los top N mejores candidatos para un nombre de SIGED
+     * Útil para sugerencias cuando no hay match válido
+     * @param {string} nombreSiged - Nombre completo del estudiante en SIGED
+     * @param {Array} entries - Array de entries del CSV
+     * @param {number} topN - Cantidad de sugerencias a retornar
+     * @returns {Array} - Array de {entry, score, nombreOriginal} ordenados por score descendente
+     */
+    function findTopCandidates(nombreSiged, entries, topN = 3) {
+        const sigedTokens = tokens(nombreSiged);
+        const candidates = [];
+
+        for (const entry of entries) {
+            const result = calculateMatchScore(entry.tok, sigedTokens);
+            candidates.push({
+                entry: entry,
+                score: result.score,
+                nombreOriginal: entry.nombre || entry.tok.join(' ')
+            });
+        }
+
+        // Ordenar por score descendente y tomar los top N
+        candidates.sort((a, b) => b.score - a.score);
+        return candidates.slice(0, topN);
+    }
+
     // Buscar campos en la página
     let procesados = 0;
     let encontrados = 0;
     const errores = [];
     const coincidencias = [];
-    
+    const sinMatch = [];  // Estudiantes de SIGED sin match con sugerencias
+
     console.log('🔍 Buscando campos en la página...');
     
     for (let i = 1; i <= 60; i++) {
@@ -265,9 +357,26 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
         const matchResult = findBestMatch(entries, rowTok, 0.70);
 
         if (!matchResult) {
-            if (procesados <= 5) {
-                console.log(`⚠️ Sin match: "${nombreEnPagina}" [${rowTok.join(' ')}]`);
+            // No hay match válido - buscar sugerencias
+            const sugerencias = findTopCandidates(nombreEnPagina, entries, 3);
+
+            sinMatch.push({
+                nombre: nombreEnPagina,
+                tokens: rowTok,
+                sugerencias: sugerencias
+            });
+
+            console.log(`⚠️ Sin match: "${nombreEnPagina}" [${rowTok.join(' ')}]`);
+
+            // Mostrar sugerencias en consola
+            if (sugerencias.length > 0 && sugerencias[0].score > 0.4) {
+                console.log(`   💡 Sugerencias (requiere ≥70% para match automático):`);
+                sugerencias.forEach((sug, idx) => {
+                    const percent = (sug.score * 100).toFixed(1);
+                    console.log(`      ${idx + 1}. ${sug.nombreOriginal} (${percent}%)`);
+                });
             }
+
             continue;
         }
 
@@ -289,11 +398,20 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
 
         // Mostrar detalles si la similitud no es perfecta
         if (score < 0.95 && procesados <= 10) {
-            console.log(`  📊 Tokens CSV: [${match.tok.join(', ')}]`);
-            console.log(`  📊 Tokens SIGED: [${rowTok.join(', ')}]`);
+            console.log(`  📊 Tokens CSV (${match.tok.length}): [${match.tok.join(', ')}]`);
+            console.log(`  📊 Tokens SIGED (${rowTok.length}): [${rowTok.join(', ')}]`);
+
+            // Mostrar información sobre matching direccional si hay diferencia de longitud
+            if (matchResult.direction && match.tok.length !== rowTok.length) {
+                const diffInfo = match.tok.length < rowTok.length
+                    ? '📝 CSV tiene menos tokens → Match basado en subset'
+                    : '📝 SIGED tiene menos tokens → Match basado en subset';
+                console.log(`  ${diffInfo}`);
+            }
+
             if (matchResult.details) {
                 const detailsStr = matchResult.details
-                    .map(d => `${d.csvToken}≈${d.sigedToken || 'N/A'}(${(d.similarity * 100).toFixed(0)}%)`)
+                    .map(d => `${d.csvToken || d.sourceToken}≈${d.sigedToken || d.targetToken || 'N/A'}(${(d.similarity * 100).toFixed(0)}%)`)
                     .join(', ');
                 console.log(`  🔍 Detalles: ${detailsStr}`);
             }
@@ -332,13 +450,44 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
     console.log('========== RESUMEN ==========');
     console.log(`📊 Filas procesadas: ${procesados}`);
     console.log(`✅ Coincidencias encontradas: ${encontrados}`);
+    console.log(`❌ Sin coincidencia: ${sinMatch.length}`);
     console.log(`📝 Entradas enviadas: ${entries.length}`);
     console.log(`⚠️ Errores: ${errores.length}`);
     console.log('============================');
-    
+
     if (errores.length > 0) {
         console.warn('⚠️ Errores encontrados:');
         errores.forEach(err => console.warn('  - ' + err));
+    }
+
+    // Mostrar sugerencias detalladas para estudiantes sin match
+    if (sinMatch.length > 0) {
+        console.log('');
+        console.log('========== SUGERENCIAS PARA ESTUDIANTES SIN MATCH ==========');
+        console.log(`Se encontraron ${sinMatch.length} estudiante(s) en SIGED sin match automático (requiere ≥70% similitud)`);
+        console.log('A continuación se muestran los candidatos más cercanos del CSV:');
+        console.log('');
+
+        sinMatch.forEach((item, idx) => {
+            console.log(`${idx + 1}. 🔴 SIGED: "${item.nombre}"`);
+
+            if (item.sugerencias.length > 0) {
+                console.log('   Candidatos del CSV:');
+                item.sugerencias.forEach((sug, sugIdx) => {
+                    const percent = (sug.score * 100).toFixed(1);
+                    const emoji = sug.score >= 0.60 ? '🟡' : sug.score >= 0.40 ? '🟠' : '⚪';
+                    console.log(`   ${emoji} ${sugIdx + 1}. ${sug.nombreOriginal} - Similitud: ${percent}%`);
+                });
+            } else {
+                console.log('   ⚠️ No hay candidatos cercanos en el CSV');
+            }
+            console.log('');
+        });
+
+        console.log('💡 TIP: Si alguna sugerencia es correcta, verifica:');
+        console.log('   - Que los nombres estén escritos correctamente en ambos sistemas');
+        console.log('   - Considera ajustar el umbral si hay muchos errores de ortografía');
+        console.log('============================================================');
     }
     
     if (encontrados === 0) {
@@ -360,11 +509,33 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
     }
     
     // Mostrar alerta de confirmación en la página
-    const resumen = `✅ NOTAS CARGADAS EN SIGED\n\n` +
+    let resumen = `✅ NOTAS CARGADAS EN SIGED\n\n` +
                   `📊 ${encontrados} de ${procesados} estudiantes procesados\n` +
-                  `📝 ${entries.length} entradas enviadas\n\n` +
-                  `⚠️ IMPORTANTE: Revisa las notas y haz clic en GUARDAR en SIGED`;
-    
+                  `📝 ${entries.length} entradas enviadas\n`;
+
+    // Agregar información sobre estudiantes sin match
+    if (sinMatch.length > 0) {
+        resumen += `\n❌ ${sinMatch.length} estudiante(s) en SIGED sin match\n`;
+        resumen += `💡 Revisa la consola (F12) para ver sugerencias\n`;
+
+        // Mostrar primeros 3 estudiantes sin match
+        const mostrar = Math.min(3, sinMatch.length);
+        resumen += `\nEstudiantes sin match:\n`;
+        for (let i = 0; i < mostrar; i++) {
+            resumen += `• ${sinMatch[i].nombre}\n`;
+            if (sinMatch[i].sugerencias.length > 0) {
+                const mejorSug = sinMatch[i].sugerencias[0];
+                const percent = (mejorSug.score * 100).toFixed(0);
+                resumen += `  Mejor candidato: ${mejorSug.nombreOriginal} (${percent}%)\n`;
+            }
+        }
+        if (sinMatch.length > 3) {
+            resumen += `... y ${sinMatch.length - 3} más\n`;
+        }
+    }
+
+    resumen += `\n⚠️ IMPORTANTE: Revisa las notas y haz clic en GUARDAR en SIGED`;
+
     alert(resumen);
     
     // Enviar respuesta exitosa
@@ -372,8 +543,10 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
         success: true,
         count: encontrados,
         processed: procesados,
+        unmatched: sinMatch.length,
         errors: errores,
-        matches: coincidencias
+        matches: coincidencias,
+        suggestions: sinMatch
     });
 }
 
