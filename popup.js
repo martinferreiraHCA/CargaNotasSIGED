@@ -6,13 +6,37 @@ let datosActividadActual = [];
 let estudiantesUnicos = 0;
 
 // ========== FUNCIONES AUXILIARES ==========
-function removeAccents(text) {
-    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+/**
+ * Normalización avanzada para nombres españoles
+ * Maneja: tildes, ñ, espacios, caracteres especiales, mayúsculas
+ * Esta función debe ser idéntica a la de content.js para consistencia
+ */
+function normalizeText(txt) {
+    return txt.normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')  // Eliminar tildes
+              .replace(/[^A-Z0-9 ]+/gi, ' ')    // Solo letras, números y espacios
+              .toUpperCase()
+              .trim();
 }
 
+/**
+ * Convierte texto a tokens normalizados y ordenados
+ * Esta función debe ser idéntica a la de content.js para consistencia
+ */
 function tokens(text) {
-    const txt = removeAccents(text).replace(/[^A-Z0-9 ]+/gi, ' ').toUpperCase().trim();
-    return txt.split(/\s+/).filter(Boolean).sort();
+    return normalizeText(text)
+              .split(/\s+/)
+              .filter(Boolean)
+              .sort();
+}
+
+/**
+ * Función legacy para compatibilidad (usa normalizeText internamente)
+ * @deprecated Usar normalizeText() en su lugar
+ */
+function removeAccents(text) {
+    return normalizeText(text);
 }
 
 function formatearNombre(apellido, nombre) {
