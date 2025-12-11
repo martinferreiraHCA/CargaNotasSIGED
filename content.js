@@ -28,19 +28,59 @@ function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
     console.log('📊 Entradas:', entries.length);
     console.log('📋 Formato:', formato);
     console.log('🎯 Tipo:', tipo);
-    
-    // Verificar que estamos en la página correcta
+
+    // Verificar compatibilidad de la página
     const url = window.location.href;
-    if (!url.includes('siged3.siged.com.uy')) {
-        console.error('❌ URL incorrecta:', url);
+    console.log('📍 URL actual:', url);
+
+    /**
+     * Detectar si la página es compatible con la extensión
+     * Busca los elementos característicos de SIGED en lugar de validar URL
+     */
+    function esPaginaCompatible() {
+        // Buscar elementos característicos de SIGED (primeras 5 filas)
+        const elementosNecesarios = [];
+
+        for (let i = 1; i <= 5; i++) {
+            const idx = String(i).padStart(4, '0');
+
+            // Buscar span de nombre de estudiante
+            const spanId = 'span_vFALUNOMCOM_' + idx;
+            const span = document.getElementById(spanId);
+
+            // Buscar select de calificación
+            const selectId = 'vCALIFCOD_' + idx;
+            const select = document.getElementById(selectId);
+
+            if (span || select) {
+                elementosNecesarios.push({ idx, span: !!span, select: !!select });
+            }
+        }
+
+        // La página es compatible si encuentra al menos 1 elemento
+        return elementosNecesarios.length > 0;
+    }
+
+    if (!esPaginaCompatible()) {
+        console.error('❌ Página no compatible:', url);
+        console.error('❌ No se encontraron los elementos necesarios de SIGED');
+        console.error('💡 Esta extensión requiere una página con:');
+        console.error('   - Campos con ID: span_vFALUNOMCOM_XXXX (nombres de estudiantes)');
+        console.error('   - Campos con ID: vCALIFCOD_XXXX (calificaciones)');
+
         sendResponse({
             success: false,
-            error: 'No estás en la página de SIGED'
+            error: 'Página no compatible.\n\n' +
+                   'Esta extensión funciona en páginas de SIGED que tengan:\n' +
+                   '• Tabla de estudiantes con campos de nombre\n' +
+                   '• Campos de calificación editables\n\n' +
+                   'Verifica que estés en la página correcta de ingreso de notas.'
         });
         return;
     }
-    
-    console.log('✅ URL verificada:', url);
+
+    console.log('✅ Página compatible detectada');
+    console.log('✅ Elementos de SIGED encontrados en la página');
     
     // ========== FUNCIONES AUXILIARES PARA MATCHING ROBUSTO ==========
 
