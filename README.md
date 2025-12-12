@@ -1,163 +1,194 @@
-# 🎓 SIGED - Extensión de Chrome para Carga de Notas
+# 📚 SIGED - Carga Automática de Notas
 
-Extensión de navegador para cargar notas automáticamente en SIGED desde archivos CSV.
+Extensión de Chrome/Edge para cargar notas automáticamente en el sistema SIGED desde archivos CSV, con **matching inteligente de estudiantes** que tolera errores de ortografía, tildes, y diferencias en nombres/apellidos.
 
-## ✨ Características
+![Version](https://img.shields.io/badge/version-2.2-blue)
+![Chrome](https://img.shields.io/badge/Chrome-Compatible-brightgreen)
+![Edge](https://img.shields.io/badge/Edge-Compatible-brightgreen)
 
-- ✅ Carga automática de notas en SIGED
-- ✅ Soporte para múltiples formatos CSV (Gradebook, Equipos v1, Equipos v2)
-- ✅ Interfaz simple y minimalista
-- ✅ Sin necesidad de bookmarklets
-- ✅ Funciona directamente desde el navegador
+## ✨ Características Principales
 
-## 📦 Instalación
+### 🎯 Matching Inteligente de Estudiantes
+- **Fuzzy matching robusto** con algoritmo Levenshtein
+- **Tolerancia a errores:**
+  - ✅ Tildes incorrectas: "GARCIA" ↔ "GARCÍA"
+  - ✅ Errores de ortografía: "RODRIGUEZ" ↔ "RODRIQUEZ"
+  - ✅ Diferencias de mayúsculas/minúsculas
+  - ✅ Comas entre nombres: "GARCÍA, JUAN" ↔ "GARCÍA JUAN"
+  - ✅ Nombres parciales: "GARCÍA JUAN" ↔ "GARCÍA PÉREZ JUAN PABLO"
+  - ✅ Apellidos compuestos variables
 
-### Chrome / Edge / Brave
+### 💡 Sistema de Sugerencias
+- Muestra candidatos cuando no hay match automático
+- Porcentajes de similitud para decisión informada
+- Logging detallado en consola para debugging
 
-1. **Descarga la extensión:**
-   - Descarga todos los archivos de la carpeta `siged-extension`
+### 🌐 Versatilidad
+- **Compatible con cualquier instalación de SIGED**
+- Detección automática de páginas compatibles
+- No requiere configuración por dominio
+- Soporta HTTP y HTTPS
 
-2. **Abre el menú de extensiones:**
-   - Ve a `chrome://extensions/`
-   - O accede desde el menú: ⋮ → Más herramientas → Extensiones
+### 📊 Formatos CSV Soportados
+1. **Gradebook Export:** `Nombre, Apellido, Título de la tarea, Calificación`
+2. **Equipos v1:** `Estudiante, Calificacion_Individual, Categoria, Etapa`
+3. **Equipos v2:** `Nombre, Nota_Individual, Nota_Equipo, Grupo`
 
-3. **Activa el modo desarrollador:**
-   - Activa el interruptor "Modo de desarrollador" en la esquina superior derecha
+## 🚀 Instalación Rápida
 
-4. **Carga la extensión:**
-   - Click en "Cargar extensión sin empaquetar"
-   - Selecciona la carpeta `siged-extension` completa
+### Para Uso Personal (5 minutos)
 
-5. **¡Listo!**
-   - Verás el ícono de la extensión en la barra de herramientas
-   - Fija la extensión para acceso rápido
+1. **Descarga el código:**
+   ```bash
+   git clone https://github.com/martinferreiraHCA/CargaNotasSIGED.git
+   cd CargaNotasSIGED
+   ```
 
-### Firefox
+2. **Abre Chrome/Edge** y ve a:
+   - Chrome: `chrome://extensions`
+   - Edge: `edge://extensions`
 
-1. **Descarga la extensión**
+3. **Activa "Modo de desarrollador"** (switch en esquina superior derecha)
 
-2. **Abre el menú de depuración:**
-   - Ve a `about:debugging#/runtime/this-firefox`
+4. **Clic en "Cargar extensión sin empaquetar"**
 
-3. **Carga temporal:**
-   - Click en "Cargar complemento temporal"
-   - Selecciona el archivo `manifest.json`
+5. **Selecciona la carpeta** `CargaNotasSIGED`
 
-## 🚀 Uso
+¡Listo! 🎉
 
-1. **Inicia sesión en SIGED:**
-   - Ve a https://siged3.siged.com.uy/sigedxCandersen/
-   - Navega a la página de calificaciones
+> Para instrucciones detalladas de instalación, distribución y publicación, consulta [INSTALACION.md](./INSTALACION.md)
 
-2. **Abre la extensión:**
-   - Click en el ícono de la extensión en la barra de herramientas
+## 📖 Cómo Usar
 
-3. **Carga tu CSV:**
-   - Click en "Seleccionar CSV"
-   - Elige tu archivo de calificaciones
+### Paso 1: Preparar el CSV
+- Exporta las calificaciones desde tu sistema (Moodle, Excel, etc.)
+- Asegúrate de que incluya nombres/apellidos de estudiantes
+- Verifica que las calificaciones estén en escala 1-10
 
-4. **Selecciona la actividad:**
-   - Elige la actividad del menú desplegable
+### Paso 2: Abrir SIGED
+- Ve a tu página de ingreso de notas en SIGED
+- La página debe tener la tabla de estudiantes visible
 
-5. **Carga las notas:**
-   - Click en "🚀 Cargar Notas en SIGED"
-   - Las notas se cargarán automáticamente en la página
+### Paso 3: Cargar Notas
+1. Haz clic en el ícono de la extensión
+2. Selecciona tu archivo CSV
+3. Verifica el formato detectado
+4. Clic en **"Cargar Notas en SIGED"**
 
-6. **Verifica y guarda:**
-   - Revisa que las notas estén correctas
-   - Guarda los cambios en SIGED
+### Paso 4: Verificar
+- Las notas se cargarán automáticamente
+- Revisa los matches en la consola (F12)
+- **IMPORTANTE:** Haz clic en GUARDAR en SIGED
 
-## 📋 Formatos CSV Soportados
+## 🧠 Algoritmo de Matching
 
-### 1. Gradebook Export
+### Ejemplos de Matching
+
+| CSV | SIGED | Similitud | Match |
+|-----|-------|-----------|-------|
+| GARCÍA JUAN | GARCIA JUAN | 100% | ✅ |
+| RODRÍGUEZ MARÍA | RODRIGUEZ MARIA | 100% | ✅ |
+| GARCÍA PÉREZ JUAN PABLO | GARCÍA JUAN | 100% | ✅ |
+| FERRARI, MÁXIMO | FERRARI RODRÍGUEZ Máximo | 88% | ✅ |
+| HERNÁNDEZ RAMÍREZ M. Victoria | Hernández, María Victoria | 90% | ✅ |
+
+## 📊 Logging y Debugging
+
+Abre la consola del navegador (F12) para ver información detallada:
+
 ```
-Nombre,Apellido,Título de la tarea,Calificación
+✅ Match #1: "GARCÍA JUAN" → Nota: 8 (Similitud: 100.0%)
+✓ Match #2: "RODRÍGUEZ MARÍA" → Nota: 7 (Similitud: 92.5%)
+  📊 Tokens CSV (4): [MARIA, RODRIGUEZ, RAMIREZ, VICTORIA]
+  📊 Tokens SIGED (3): [MARIA, RODRIGUEZ, VICTORIA]
+
+⚠️ Sin match: "PÉREZ LUIS"
+   💡 Sugerencias (requiere ≥70% para match automático):
+      1. PERES LUIS (65.0%)
+      2. PÉREZ LUCÍA (55.3%)
 ```
 
-### 2. Calificaciones por Equipos v1
+## 🔧 Configuración Avanzada
+
+### Ajustar Threshold de Similitud
+
+**Archivo:** `content.js` línea 398
+
+```javascript
+// Más permisivo (más matches, posibles falsos positivos)
+const matchResult = findBestMatch(entries, rowTok, 0.60);  // 60%
+
+// Más estricto (menos matches, más precisión)
+const matchResult = findBestMatch(entries, rowTok, 0.80);  // 80%
 ```
-Estudiante,Calificacion_Individual,Categoria,Etapa
+
+## 🌍 Compatibilidad
+
+### Navegadores
+- ✅ Chrome 88+
+- ✅ Microsoft Edge 88+
+- ✅ Brave
+- ✅ Opera
+
+### Dominios SIGED Soportados
+- `*.siged.com.uy` - Uruguay
+- `*.siged.com` - Internacional
+- `*.siged.edu.uy` - Educativo Uruguay
+- HTTP y HTTPS
+
+## 📁 Estructura del Proyecto
+
+```
+CargaNotasSIGED/
+├── manifest.json          # Configuración de la extensión
+├── content.js            # Script inyectado en SIGED (matching logic)
+├── popup.html            # Interfaz de usuario
+├── popup.js              # Lógica del popup (parsing CSV)
+├── icon16.png            # Ícono 16x16
+├── icon48.png            # Ícono 48x48
+├── icon128.png           # Ícono 128x128
+├── README.md             # Este archivo
+└── INSTALACION.md        # Guía de instalación detallada
 ```
 
-### 3. Calificaciones por Equipos v2
-```
-Nombre,Nota_Individual,Nota_Equipo,Grupo
-```
+## 🐛 Reportar Problemas
 
-## ⚙️ Permisos Requeridos
+Si encuentras un bug o tienes una sugerencia:
 
-La extensión solicita los siguientes permisos:
+1. Abre un [Issue](https://github.com/martinferreiraHCA/CargaNotasSIGED/issues)
+2. Describe el problema claramente
+3. Incluye capturas de pantalla si es posible
+4. Incluye los logs de la consola (F12)
 
-- **activeTab**: Para acceder a la página actual de SIGED
-- **storage**: Para guardar temporalmente los datos del CSV
-- **host_permissions**: Para inyectar código solo en siged3.siged.com.uy
+## 📝 Changelog
 
-## 🔒 Privacidad
+### v2.2 (2024)
+- ✨ Detección automática de páginas compatibles
+- ✨ Soporte multi-dominio
+- 🐛 Mejoras en mensajes de error
 
-- ✅ Todos los datos se procesan localmente en tu navegador
-- ✅ No se envía información a servidores externos
-- ✅ Los datos del CSV solo se almacenan temporalmente
-- ✅ La extensión solo funciona en el sitio de SIGED
+### v2.1 (2024)
+- ✨ Sistema de sugerencias inteligente
+- ✨ Matching bidireccional para nombres parciales
+- 🐛 Mejoras en fuzzy matching
 
-## 🐛 Solución de Problemas
-
-### La extensión no carga las notas
-
-1. **Verifica que estés en la página correcta:**
-   - Debe ser la página de calificaciones de SIGED
-   - La URL debe contener `siged3.siged.com.uy`
-
-2. **Recarga la página:**
-   - Presiona F5 para recargar SIGED
-   - Vuelve a intentar
-
-3. **Verifica el CSV:**
-   - Asegúrate de que el formato sea correcto
-   - Verifica que las columnas tengan los nombres exactos
-
-4. **Abre la consola:**
-   - Presiona F12
-   - Ve a la pestaña "Consola"
-   - Busca mensajes de error
-
-### La extensión no aparece
-
-1. **Verifica la instalación:**
-   - Ve a `chrome://extensions/`
-   - Asegúrate de que la extensión esté activada
-
-2. **Fija la extensión:**
-   - Click en el ícono de puzzle en la barra de herramientas
-   - Click en el pin junto a "SIGED - Carga de Notas"
-
-## 📝 Notas Adicionales
-
-- La extensión busca hasta 60 estudiantes en la página
-- Los nombres se normalizan automáticamente (sin tildes en apellidos)
-- Las notas se redondean o truncan según configuración
-- Los comentarios se cargan automáticamente si están disponibles
-
-## 🔄 Actualización
-
-Para actualizar la extensión:
-
-1. Descarga la nueva versión
-2. Ve a `chrome://extensions/`
-3. Click en el botón de actualizar (🔄) en la extensión
-
-## 📧 Soporte
-
-Si tienes problemas o sugerencias:
-
-1. Abre la consola del navegador (F12)
-2. Revisa los mensajes de error
-3. Reporta el problema con capturas de pantalla
+### v2.0 (2024)
+- ✨ Algoritmo de Levenshtein para fuzzy matching
+- ✨ Scoring avanzado con tolerancia a errores
+- ✨ Logging detallado con porcentajes
 
 ## 📄 Licencia
 
-Uso libre para el Colegio y Liceo Hans Christian Andersen.
+Uso libre para instituciones educativas.
+
+## 👨‍💻 Autor
+
+**Martín Ferreira**
+- GitHub: [@martinferreiraHCA](https://github.com/martinferreiraHCA)
 
 ---
 
-**Versión:** 1.0  
+**Versión:** 2.2
 **Última actualización:** 2024
+
+⭐ Si esta extensión te fue útil, considera darle una estrella en GitHub!
