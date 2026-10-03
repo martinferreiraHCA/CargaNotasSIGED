@@ -4,7 +4,7 @@ Extensión de Chrome/Edge para **importar y exportar notas en SIGED sin pasarlas
 Muestra un panel dentro de la propia página de SIGED que **detecta solo en qué pantalla estás** y
 ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se hace con dos o tres clics.
 
-![Version](https://img.shields.io/badge/version-3.0-blue)
+![Version](https://img.shields.io/badge/version-3.1-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-Compatible-brightgreen)
 ![Edge](https://img.shields.io/badge/Edge-Compatible-brightgreen)
 
@@ -15,6 +15,7 @@ ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se h
 | **Libro del Profesor** (lista de alumnos del grupo) | 📥 Descargar la **plantilla del grupo** (Excel o CSV) con todos los alumnos y columnas *Nota* y *Comentario* para completar. |
 | **Evaluaciones** (escritos, parciales, orales, etc.) | 📥 Exportar las notas ya cargadas · 📤 Importar notas desde un archivo. |
 | **Pasaje de calificaciones boletín por libreta** (semestrales, reuniones) | 📥 Exportar notas y juicios · 📤 Importar notas y juicios desde un archivo. |
+| **Orales, Escritos y O. Actividades** (detalle por alumno) | 📥 Descargar un Excel con **todas las notas y comentarios**, los **promedios por período** (notas por tipo, rendimiento e inasistencias) y un resumen por alumno. De un alumno o de todos los visibles. |
 | Cualquier otra página | El panel queda minimizado (botón "📚 Carga de Notas") y avisa que ahí no hay notas para cargar. |
 
 El panel se puede minimizar, arrastrar y recuerda su posición. También se puede abrir desde el ícono de la extensión.
@@ -35,6 +36,16 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 ### 3. Subir la exportación de calificaciones de CREA
 1. En CREA exportá el libro de calificaciones (CSV con `Nombre, Apellido, Título de la tarea, Calificación`).
 2. En la evaluación de SIGED: **Importar notas desde archivo**, elegí la tarea de CREA que querés cargar.
+
+### 4. Exportar todas las notas de la libreta con promedios (Orales, Escritos y O. Actividades)
+1. Entrá en SIGED a **Orales, Escritos y O. Actividades**. Si solo ves un alumno, hacé clic en **TODOS** (el panel tiene un botón que lo hace por vos) y en **Mostrar detalle (todos)**.
+2. Elegí en el panel si querés el Excel de **todos los alumnos visibles** o de **un alumno**, y hacé clic en **Descargar Excel**.
+3. El archivo tiene tres hojas con el mismo formato para cada alumno:
+   - **Notas:** una fila por evaluación con período, fecha, tipo, nota, comentario y quién la registró.
+   - **Promedios:** una fila por alumno y período con las notas por tipo (Orales, Escritas, O. Act), el **Rendimiento (R)** y las inasistencias (justificadas, no justificadas, fictas).
+   - **Resumen:** una fila por alumno con documento, curso, antecedentes, calificaciones semestrales y el rendimiento de cada período.
+
+> Los **juicios de las reuniones** no aparecen en esa página de SIGED. Para exportarlos, entrá a **Pasaje de calificaciones boletín por libreta**, elegí la reunión (por ejemplo la anterior) y usá **Descargar notas de esta página**: el Excel incluye la columna Juicio.
 
 ## 🧾 Archivos que entiende
 
@@ -76,7 +87,8 @@ CargaNotasSIGED/
 ├── content.js             # Panel en la página: detección de página, importar/exportar, carga de notas
 ├── shared/
 │   ├── matching.js        # Comparación de nombres (Levenshtein, tokens, asignación única)
-│   └── formatos.js        # Lectura/escritura de Excel y CSV, detección de columnas y formatos
+│   ├── formatos.js        # Lectura/escritura de Excel y CSV, detección de columnas y formatos
+│   └── detalle.js         # Lectura de "Orales, Escritos y O. Actividades" y armado del Excel con promedios
 ├── lib/xlsx.full.min.js   # SheetJS (Apache-2.0) para leer y generar archivos Excel
 ├── popup.html / popup.js  # Ventana del ícono: muestra dónde estás y abre el panel
 ├── icon16.png, icon48.png, icon128.png
@@ -89,6 +101,7 @@ La detección se hace por el contenido, no por la URL:
 - **Boletín:** existe el campo `vCALIFXREUCALIFCOD_0001` (nota) y `vCALIFXREUJUICIO_0001` (juicio).
 - **Evaluaciones (Calificaciones Libreta):** existe el campo `vCALIFCOD_0001` (nota) y `vLIBDCOMENTARIO_0001` (comentario). El panel muestra el tipo de evaluación (Escritos, Parcial, Orales…), su fecha y la reunión a la que está asignada. Si la evaluación es de tipo **Semáforo**, acepta Verde / Amarillo / Rojo en la columna Nota.
 - **Libro del Profesor:** existe el selector de libreta `vLIBIDSELEC` y las tarjetas de alumnos.
+- **Orales, Escritos y O. Actividades:** existen `TXTNROLISTA_0001` y `TXTAPELLIDO_0001`. Se leen las tablas por período (`beTableLibretaEval`), las semestrales (`TXTCALIFICACION_XXXX`) y la grilla de detalle (`span_vLIBDFEC_RRRRXXXX`, `span_vTDLIBDSCPAN_…`, `span_vCALIFICACION_…`, `span_vLIBDCOMENTARIOGRID_…`). El período de cada evaluación se deduce del orden en que SIGED la muestra en el resumen y, si no coincide, de los meses del nombre del período.
 - Los nombres de los alumnos se leen de `span_vFALUNOMCOM_XXXX`. Si SIGED recarga la grilla (por ejemplo al cambiar de libreta), el panel se actualiza solo.
 
 ## 🐛 Reportar problemas
@@ -97,6 +110,9 @@ La detección se hace por el contenido, no por la URL:
 3. Si podés, agregá una captura del panel y los mensajes de la consola (F12).
 
 ## 📝 Changelog
+
+### v3.1
+- ✨ Exportación de la página **Orales, Escritos y O. Actividades**: Excel con todas las evaluaciones y comentarios, promedios por período (notas por tipo, rendimiento, inasistencias) y resumen por alumno. De un alumno o de todos.
 
 ### v3.0
 - ✨ Panel flotante dentro de SIGED que detecta automáticamente la página (Libro del Profesor, Evaluaciones, Boletín).

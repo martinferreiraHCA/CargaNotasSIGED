@@ -354,6 +354,35 @@
         return nombre;
     }
 
+    /**
+     * Descarga un libro Excel con varias hojas.
+     * @param {Object} p - {hojas: [{nombre, encabezados, filas, anchos}], info: [[k, v]], nombreBase: [...]}
+     * Si no hay soporte Excel, descarga la primera hoja como CSV.
+     */
+    function descargarLibro(p) {
+        if (!global.XLSX) {
+            const h = p.hojas[0];
+            return descargarPlanilla({ encabezados: h.encabezados, filas: h.filas, nombreBase: p.nombreBase, formato: 'csv' });
+        }
+        const XLSX = global.XLSX;
+        const wb = XLSX.utils.book_new();
+        p.hojas.forEach(h => {
+            const ws = XLSX.utils.aoa_to_sheet([h.encabezados].concat(h.filas));
+            ws['!cols'] = (h.anchos || h.encabezados.map(x => Math.max(12, String(x).length + 2))).map(w => ({ wch: w }));
+            ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+            XLSX.utils.book_append_sheet(wb, ws, String(h.nombre).slice(0, 31));
+        });
+        if (p.info && p.info.length) {
+            const wsInfo = XLSX.utils.aoa_to_sheet(p.info);
+            wsInfo['!cols'] = [{ wch: 22 }, { wch: 80 }];
+            XLSX.utils.book_append_sheet(wb, wsInfo, 'Info');
+        }
+        const nombre = nombreArchivoSeguro(p.nombreBase, 'xlsx');
+        const salida = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        descargarBlob(new Blob([salida], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), nombre);
+        return nombre;
+    }
+
     // ---------- utilidades de valores ----------
     function notaNumero(valor) {
         const s = String(valor === null || valor === undefined ? '' : valor).trim().replace(',', '.');
@@ -389,6 +418,7 @@
         construirEntradas,
         nombreDeFila,
         descargarPlanilla,
+        descargarLibro,
         descargarBlob,
         aCSV,
         nombreArchivoSeguro,

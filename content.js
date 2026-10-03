@@ -18,6 +18,7 @@
 
     const M = window.SigedMatching;
     const F = window.SigedFormatos;
+    const D = window.SigedDetalle;
     const UMBRAL_MATCH = 0.70;
     const MAX_FILAS = 2000;
 
@@ -376,6 +377,27 @@
             },
             campos: { comentario: 'Comentario' },
             aplicar: null // en esta página no se cargan notas
+        },
+
+        // ---------------- Orales, Escritos y O. Actividades (detalle por alumno) ----------------
+        detalle: {
+            clave: 'detalle',
+            etiqueta: 'Orales, Escritos y O. Actividades',
+            icono: '📊',
+            detectar: () => !!D && D.detectar(),
+            contexto() {
+                const titulo = tituloPagina();
+                const alumnos = estado.filas || [];
+                const curso = alumnos.length ? alumnos[0].curso : '';
+                return { libreta: curso, evaluacion: '', titulo, totalLibreta: D.totalAlumnosLibreta() };
+            },
+            leerFilas() {
+                return D.leerAlumnos().map(a => Object.assign(a, { tok: M.tokens(a.nombre) }));
+            },
+            columnasExport() { return []; },
+            filaExport() { return []; },
+            campos: { comentario: 'Comentario' },
+            aplicar: null
         }
     };
 
@@ -383,6 +405,7 @@
         if (PAGINAS.boletin.detectar()) return PAGINAS.boletin;
         if (PAGINAS.evaluacion.detectar()) return PAGINAS.evaluacion;
         if (PAGINAS.libro.detectar()) return PAGINAS.libro;
+        if (PAGINAS.detalle.detectar()) return PAGINAS.detalle;
         return null;
     }
 
@@ -400,6 +423,7 @@
         asignacion: [],       // por fila de SIGED: índice de entrada o -1
         mensaje: null,        // {tipo: 'ok'|'error'|'aviso'|'info', texto}
         resultado: null,      // resumen tras aplicar
+        alumnoSel: '',        // página de detalle: idx del alumno a exportar ('' = todos los visibles)
         colapsado: false
     };
 
@@ -409,9 +433,9 @@
         const pagina = detectarPagina();
         const cambioPagina = (pagina && pagina.clave) !== (estado.pagina && estado.pagina.clave);
         estado.pagina = pagina;
-        estado.contexto = pagina ? pagina.contexto() : { libreta: '', evaluacion: '', titulo: tituloPagina() };
         const firmaAntes = estado.firmaFilas || '';
         estado.filas = pagina ? pagina.leerFilas() : [];
+        estado.contexto = pagina ? pagina.contexto() : { libreta: '', evaluacion: '', titulo: tituloPagina() };
         estado.firmaFilas = estado.filas.map(f => f.nombre).join('|');
         const cambiaronAlumnos = firmaAntes !== estado.firmaFilas;
         if (cambioPagina || cambiaronAlumnos) {
@@ -575,6 +599,56 @@
         render();
     }
 
+    /** Exporta el detalle por alumno (página "Orales, Escritos y O. Actividades") a un Excel con varias hojas */
+    function exportarDetalle() {
+        refrescarPagina();
+        let alumnos = estado.filas;
+        if (estado.alumnoSel) alumnos = alumnos.filter(a => a.idx === estado.alumnoSel);
+        if (alumnos.length === 0) {
+            estado.mensaje = { tipo: 'aviso', texto: 'No hay alumnos visibles para exportar.' };
+            render();
+            return;
+        }
+        const ctx = estado.contexto;
+        const hoy = new Date();
+        const sinDetalle = alumnos.filter(a => !a.detalleCargado).length;
+        const { hojas } = D.construirHojas(alumnos);
+        const info = [
+            ['Planilla generada por', 'SIGED - Carga de Notas (extensión del navegador)'],
+            ['Página de origen', PAGINAS.detalle.etiqueta],
+            ['Curso / Grupo / Asignatura', ctx.libreta || ''],
+            ['Alumnos exportados', String(alumnos.length) + (ctx.totalLibreta ? ' de ' + ctx.totalLibreta + ' de la libreta' : '')],
+            ['Fecha de exportación', hoy.toLocaleDateString('es-UY')],
+            ['', ''],
+            ['Hoja Notas', 'Una fila por evaluación: período en que SIGED la contabiliza, fecha, tipo, nota, comentario y quién la registró.'],
+            ['Hoja Promedios', 'Una fila por alumno y período: notas por tipo (Orales, Escritas, O. Act), Rendimiento (R) e inasistencias (J, NJ, fictas).'],
+            ['Hoja Resumen', 'Una fila por alumno: datos, calificaciones de evaluaciones semestrales y rendimiento de cada período.'],
+            ['Juicios', 'Esta página de SIGED no muestra los juicios de las reuniones. Para exportarlos, entrá a "Pasaje de calificaciones boletín por libreta", elegí la reunión y usá "Descargar notas de esta página".']
+        ];
+        if (sinDetalle) info.push(['Atención', `${sinDetalle} alumno(s) no tenían el detalle cargado en SIGED (usá "Mostrar detalle (todos)" antes de exportar).`]);
+        const nombreBase = ['Detalle', alumnos.length === 1 ? alumnos[0].nombre : ctx.libreta, hoy.toISOString().slice(0, 10)];
+        try {
+            const nombre = F.descargarLibro({ hojas, info, nombreBase });
+            estado.mensaje = { tipo: 'ok', texto: `Archivo descargado: ${nombre}` + (sinDetalle ? ` (${sinDetalle} alumno(s) sin detalle cargado)` : '') };
+        } catch (err) {
+            console.error('❌ Error exportando detalle:', err);
+            estado.mensaje = { tipo: 'error', texto: 'No se pudo generar el archivo: ' + err.message };
+        }
+        render();
+    }
+
+    /** Hace clic en un control de SIGED (botón TODOS, Mostrar detalle) en nombre del docente */
+    function clicSiged(el, descripcion) {
+        if (!el) {
+            estado.mensaje = { tipo: 'aviso', texto: `No encontré el control "${descripcion}" en la página.` };
+            render();
+            return;
+        }
+        el.click();
+        estado.mensaje = { tipo: 'info', texto: `Pedí a SIGED "${descripcion}". Esperá a que la página termine de cargar.` };
+        render();
+    }
+
     // =====================================================================
     //  Panel flotante (Shadow DOM para no mezclar estilos con SIGED)
     // =====================================================================
@@ -690,10 +764,10 @@
                     </div>`;
         }
         const partes = [];
-        if (ctx.libreta) partes.push(`<b>Libreta:</b> ${escapeHtml(ctx.libreta)}`);
+        if (ctx.libreta) partes.push(`<b>${p.clave === 'detalle' ? 'Curso/Gr/Asig' : 'Libreta'}:</b> ${escapeHtml(ctx.libreta)}`);
         if (ctx.evaluacion) partes.push(`<b>Evaluación:</b> ${escapeHtml(ctx.evaluacion)}`);
         if (ctx.reunion) partes.push(`<b>Asignada a:</b> ${escapeHtml(ctx.reunion)}`);
-        partes.push(`<b>Alumnos:</b> ${estado.filas.length}`);
+        partes.push(`<b>Alumnos${p.clave === 'detalle' ? ' visibles' : ''}:</b> ${estado.filas.length}${p.clave === 'detalle' && ctx.totalLibreta ? ' de ' + ctx.totalLibreta : ''}`);
         return `<div class="donde">
                     <div class="etq">Dónde estás</div>
                     <div class="pag">${p.icono} ${escapeHtml(p.etiqueta)}</div>
@@ -712,6 +786,7 @@
         if (!p) return html + renderMensaje();
 
         const xlsx = F.tieneXLSX();
+        if (p.clave === 'detalle') return html + renderDetalle();
         if (p.clave === 'libro') {
             if (estado.filas.length === 0) {
                 html += `<div class="msg msg-aviso">Seleccioná una libreta para ver los alumnos del grupo.</div>`;
@@ -738,6 +813,40 @@
         html += renderMensaje();
         if (estado.archivo) html += renderArchivo();
         return html;
+    }
+
+    function renderDetalle() {
+        const alumnos = estado.filas;
+        const ctx = estado.contexto;
+        const total = ctx.totalLibreta || 0;
+        const sinDetalle = alumnos.filter(a => !a.detalleCargado).length;
+        const b = D.botones();
+        let html = '';
+        if (alumnos.length === 0) {
+            return `<div class="msg msg-aviso">No hay alumnos en la página. Elegí un alumno o hacé clic en TODOS en SIGED.</div>`;
+        }
+        if (total && alumnos.length < total) {
+            html += `<div class="msg msg-info">Se ven <b>${alumnos.length} de ${total}</b> alumnos de la libreta. Para exportar a todos, mostralos primero en SIGED.</div>`;
+            if (b.todos) html += `<button class="btn btn-gris" data-act="siged-todos"><span class="ic">👥</span><span>Mostrar TODOS los alumnos en SIGED<small>Equivale al botón TODOS de la página</small></span></button>`;
+        }
+        if (sinDetalle) {
+            html += `<div class="msg msg-aviso">${sinDetalle} alumno(s) no tienen el detalle de evaluaciones cargado.</div>`;
+            if (b.mostrarDetalleTodos) html += `<button class="btn btn-gris" data-act="siged-detalle"><span class="ic">🔎</span><span>Mostrar detalle de todos en SIGED<small>Equivale a "Mostrar / Ocultar detalle (todos)"</small></span></button>`;
+        }
+        if (alumnos.length > 1) {
+            html += `<div class="caja"><label>¿Qué exportar?</label>
+                <select data-act="alumno">
+                    <option value="">Todos los alumnos visibles (${alumnos.length})</option>
+                    ${alumnos.map(a => `<option value="${a.idx}" ${a.idx === estado.alumnoSel ? 'selected' : ''}>${escapeHtml(a.nro ? a.nro + ' - ' : '')}${escapeHtml(a.nombre)}</option>`).join('')}
+                </select></div>`;
+        }
+        const sel = estado.alumnoSel ? alumnos.find(a => a.idx === estado.alumnoSel) : null;
+        const cantEval = (sel ? [sel] : alumnos).reduce((n, a) => n + a.evaluaciones.length, 0);
+        html += `<button class="btn btn-azul" data-act="exportar-detalle"><span class="ic">📥</span><span>Descargar Excel ${sel ? 'de ' + escapeHtml(sel.apellido) : 'de ' + alumnos.length + ' alumno(s)'}
+                 <small>${cantEval} evaluaciones con comentarios · promedios por período · resumen</small></span></button>`;
+        html += `<div class="ayuda">El Excel tiene tres hojas: <b>Notas</b> (cada evaluación con fecha, tipo, nota, comentario y período), <b>Promedios</b> (notas por tipo, rendimiento e inasistencias de cada período) y <b>Resumen</b> (datos, semestrales y rendimiento por período).<br>
+                 Los juicios de las reuniones no están en esta página: exportalos desde <b>Pasaje de calificaciones boletín</b>.</div>`;
+        return html + renderMensaje();
     }
 
     function renderArchivo() {
@@ -852,6 +961,9 @@
             case 'quitar': quitarArchivo(); break;
             case 'aplicar': aplicarNotas(); break;
             case 'guardar': irAGuardar(); break;
+            case 'exportar-detalle': exportarDetalle(); break;
+            case 'siged-todos': clicSiged(D.botones().todos, 'mostrar TODOS los alumnos'); break;
+            case 'siged-detalle': clicSiged(D.botones().mostrarDetalleTodos, 'mostrar el detalle de todos'); break;
         }
     });
 
@@ -872,6 +984,10 @@
             estado.tipo = el.value;
             estado.resultado = null;
             recalcularAsignacion();
+            render();
+        } else if (act === 'alumno') {
+            estado.alumnoSel = el.value;
+            estado.mensaje = null;
             render();
         } else if (act === 'asignar') {
             const fi = parseInt(el.dataset.fila, 10);
@@ -973,7 +1089,7 @@
                 case 'exportar':
                     montar();
                     setColapsado(false);
-                    exportar(req.formato);
+                    if (estado.pagina && estado.pagina.clave === 'detalle') exportarDetalle(); else exportar(req.formato);
                     sendResponse({ ok: true });
                     break;
                 case 'importar':

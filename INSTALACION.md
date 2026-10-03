@@ -7,7 +7,7 @@
 2. Asegúrate de tener todos los archivos y carpetas:
    - `manifest.json`
    - `content.js`
-   - `shared/matching.js` y `shared/formatos.js`
+   - `shared/matching.js`, `shared/formatos.js` y `shared/detalle.js`
    - `lib/xlsx.full.min.js`
    - `popup.js` y `popup.html`
    - `icon16.png`, `icon48.png`, `icon128.png`
@@ -46,6 +46,7 @@
 3. El panel reconoce solo la página:
    - **Libro del Profesor:** botón para descargar la plantilla del grupo.
    - **Evaluaciones** y **Pasaje de calificaciones boletín:** botones para exportar e importar notas.
+   - **Orales, Escritos y O. Actividades:** botón para descargar el Excel con notas, comentarios y promedios por período.
 4. Al importar, revisa la vista previa, haz clic en **Cargar notas en la página** y luego en **Guardar** en SIGED.
 
 También puedes hacer clic en el ícono de la extensión: muestra dónde estás y abre el panel.
