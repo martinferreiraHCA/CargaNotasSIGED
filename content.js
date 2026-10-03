@@ -453,6 +453,7 @@
         mensaje: null,        // {tipo: 'ok'|'error'|'aviso'|'info', texto}
         resultado: null,      // resumen tras aplicar
         alumnoSel: '',        // página de detalle: idx del alumno a exportar ('' = todos los visibles)
+        actividadSel: '',     // página de detalle: evaluación elegida para copiar (clave tipo|fecha)
         colapsado: false
     };
 
@@ -808,6 +809,167 @@
         render();
     }
 
+    // =====================================================================
+    //  "Notas guardadas en el asistente": copiar una evaluación de una página
+    //  y cargarla en otra (por ejemplo, de Escritos a Parcial) sin archivos.
+    //  Se guarda en localStorage del sitio de SIGED (una sola a la vez).
+    // =====================================================================
+    const CLAVE_GUARDADAS = 'sigedCargaNotas.notasGuardadas';
+    const GUARDADAS_MAX_DIAS = 30;
+
+    function leerGuardadas() {
+        try {
+            const g = JSON.parse(localStorage.getItem(CLAVE_GUARDADAS) || 'null');
+            if (!g || !Array.isArray(g.entradas) || !g.entradas.length) return null;
+            if (Date.now() - (g.fecha || 0) > GUARDADAS_MAX_DIAS * 86400000) { localStorage.removeItem(CLAVE_GUARDADAS); return null; }
+            return g;
+        } catch (e) { return null; }
+    }
+
+    function guardarNotas(origen, libreta, entradas) {
+        const limpias = entradas
+            .map(e => ({ nombre: String(e.nombre || '').trim(), nota: String(e.nota || '').trim(), comentario: String(e.comentario || '').trim() }))
+            .filter(e => e.nombre && (e.nota || e.comentario));
+        if (!limpias.length) {
+            estado.mensaje = { tipo: 'aviso', texto: 'No hay notas ni comentarios para guardar.' };
+            render();
+            return;
+        }
+        try {
+            localStorage.setItem(CLAVE_GUARDADAS, JSON.stringify({ origen, libreta, fecha: Date.now(), entradas: limpias }));
+            estado.mensaje = { tipo: 'ok', texto: `📋 Guardado en el asistente: ${origen} (${limpias.length} alumno${limpias.length === 1 ? '' : 's'}). Ahora entrá a la evaluación de destino y el panel te ofrece cargarlas.` };
+        } catch (e) {
+            estado.mensaje = { tipo: 'error', texto: 'No se pudo guardar en el navegador: ' + e.message };
+        }
+        render();
+    }
+
+    function olvidarGuardadas() {
+        try { localStorage.removeItem(CLAVE_GUARDADAS); } catch (e) { /* ignorar */ }
+        estado.mensaje = null;
+        render();
+    }
+
+    /** Usa las notas guardadas como si fueran un archivo importado (misma vista previa y carga) */
+    function usarGuardadas() {
+        const g = leerGuardadas();
+        if (!g) { render(); return; }
+        refrescarPagina();
+        const filas = g.entradas.map(e => ({ Estudiante: e.nombre, Nota: e.nota, Comentario: e.comentario }));
+        estado.archivo = {
+            nombreArchivo: '📋 ' + g.origen,
+            headers: ['Estudiante', 'Nota', 'Comentario'],
+            filas,
+            mapa: { estudiante: 'Estudiante', nota: 'Nota', comentario: 'Comentario' },
+            formato: 'universal',
+            actividades: [],
+            requiereTipo: false,
+            estudiantes: filas.length,
+            guardadas: true
+        };
+        estado.actividad = '';
+        estado.tipo = 'individual';
+        estado.resultado = null;
+        estado.mensaje = null;
+        recalcularAsignacion();
+        render();
+    }
+
+    function hace(ts) {
+        const min = Math.round((Date.now() - ts) / 60000);
+        if (min < 1) return 'recién';
+        if (min < 60) return `hace ${min} min`;
+        const h = Math.round(min / 60);
+        if (h < 24) return `hace ${h} h`;
+        return `hace ${Math.round(h / 24)} día(s)`;
+    }
+
+    /** Tarjeta "Notas guardadas en el asistente" para las páginas de carga */
+    function renderGuardadas() {
+        const g = leerGuardadas();
+        if (!g) return '';
+        if (estado.archivo && estado.archivo.guardadas) return '';
+        return `<div class="caja" style="border-color:#f0c36d;background:#fffaf0">
+                    <div class="tit">📋 Notas guardadas en el asistente</div>
+                    <div><b>${escapeHtml(g.origen)}</b><br><span class="ayuda">${g.entradas.length} alumno${g.entradas.length === 1 ? '' : 's'}${g.libreta && !g.origen.includes(g.libreta) ? ' · ' + escapeHtml(g.libreta) : ''} · ${hace(g.fecha)}</span></div>
+                    <button class="btn btn-verde" data-act="guardadas-usar"><span class="ic">✅</span><span>Cargar estas notas acá<small>Vas a ver la vista previa antes de confirmar</small></span></button>
+                    <div style="text-align:center"><button class="link" data-act="guardadas-olvidar">Ya no las necesito</button></div>
+                </div>`;
+    }
+
+    /** Evaluaciones de la página de detalle agrupadas por tipo y fecha (para copiar una puntual) */
+    function actividadesDetalle() {
+        const grupos = new Map();
+        estado.filas.forEach(a => (a.evaluaciones || []).forEach(ev => {
+            if (!ev.nota && !ev.comentario) return;
+            const clave = `${ev.tipo}|${ev.fecha}`;
+            if (!grupos.has(clave)) grupos.set(clave, { clave, tipo: ev.tipo, fecha: ev.fecha, periodo: ev.periodo, entradas: [] });
+            grupos.get(clave).entradas.push({ nombre: a.nombre, nota: ev.nota, comentario: ev.comentario });
+        }));
+        const ordenFecha = f => { const m = String(f).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); return m ? (+m[3]) * 10000 + (+m[2]) * 100 + (+m[1]) : 0; };
+        return Array.from(grupos.values()).sort((a, b) => ordenFecha(b.fecha) - ordenFecha(a.fecha) || a.tipo.localeCompare(b.tipo));
+    }
+
+    function etiquetaActividad(a) {
+        return `${a.tipo} · ${a.fecha}`;
+    }
+
+    function copiarActividad(modo) {
+        refrescarPagina();
+        const act = actividadesDetalle().find(a => a.clave === estado.actividadSel);
+        if (!act) {
+            estado.mensaje = { tipo: 'aviso', texto: 'Elegí primero la evaluación que querés copiar.' };
+            render();
+            return;
+        }
+        const origen = `${etiquetaActividad(act)} (${estado.contexto.libreta || 'libreta'})`;
+        if (modo === 'excel') {
+            try {
+                const nombre = F.descargarPlanilla({
+                    encabezados: ['N°', 'Estudiante', 'Nota', 'Comentario'],
+                    filas: act.entradas.map((e, i) => [i + 1, e.nombre, e.nota, e.comentario]),
+                    info: [['Evaluación', etiquetaActividad(act)], ['Libreta', estado.contexto.libreta || ''], ['Alumnos', String(act.entradas.length)],
+                           ['Cómo usarla', 'Entrá en SIGED a la evaluación de destino y usá "Importar notas desde archivo".']],
+                    nombreBase: ['Notas', act.tipo, act.fecha, estado.contexto.libreta],
+                    anchos: [5, 38, 8, 60]
+                });
+                estado.mensaje = { tipo: 'ok', texto: `Archivo descargado: ${nombre}` };
+            } catch (err) {
+                estado.mensaje = { tipo: 'error', texto: 'No se pudo generar el archivo: ' + err.message };
+            }
+            render();
+            return;
+        }
+        guardarNotas(origen, estado.contexto.libreta, act.entradas);
+    }
+
+    /** Desde Evaluaciones o Boletín: guardar lo que está cargado en la grilla para otra evaluación */
+    function guardarPaginaActual() {
+        refrescarPagina();
+        const ctx = estado.contexto;
+        const origen = [ctx.evaluacion, ctx.libreta].filter(Boolean).join(' · ') || estado.pagina.etiqueta;
+        guardarNotas(origen, ctx.libreta, estado.filas.map(f => ({ nombre: f.nombre, nota: f.nota, comentario: f.comentario })));
+    }
+
+    /** Sección "Copiar una evaluación" de la página de detalle */
+    function renderCopiarActividad() {
+        const acts = actividadesDetalle();
+        if (!acts.length) return '';
+        if (estado.actividadSel && !acts.some(a => a.clave === estado.actividadSel)) estado.actividadSel = '';
+        const sel = acts.find(a => a.clave === estado.actividadSel);
+        return `<div class="caja">
+            <div class="tit">Copiar una evaluación a otro apartado</div>
+            <label>¿Qué evaluación?</label>
+            <select data-act="actividad-detalle">
+                <option value="">Elegí una…</option>
+                ${acts.map(a => `<option value="${escapeHtml(a.clave)}" ${a.clave === estado.actividadSel ? 'selected' : ''}>${escapeHtml(etiquetaActividad(a))} (${a.entradas.length} alumno${a.entradas.length === 1 ? '' : 's'})</option>`).join('')}
+            </select>
+            <button class="btn btn-verde" data-act="copiar-guardar" ${sel ? '' : 'disabled'}><span class="ic">📋</span><span>Guardar en el asistente${sel ? ': ' + escapeHtml(etiquetaActividad(sel)) : ''}
+                <small>Después entrá a la evaluación de destino (por ejemplo Parcial) y cargalas con un clic</small></span></button>
+            <div style="text-align:center"><button class="link" data-act="copiar-excel" ${sel ? '' : 'disabled'}>Prefiero descargarla en Excel</button></div>
+        </div>`;
+    }
+
     /** Hace clic en un control de SIGED (botón TODOS, Mostrar detalle) en nombre del docente */
     function clicSiged(el, descripcion) {
         if (!el) {
@@ -984,9 +1146,13 @@
                     <span class="ic">📥</span><span>Descargar notas de esta página${xlsx ? ' (Excel)' : ' (CSV)'}
                     <small>Para guardarlas o pasarlas a otra evaluación</small></span></button>`;
         if (xlsx) html += `<div style="text-align:center;margin-top:-4px"><button class="link" data-act="exportar" data-formato="csv">Descargar en CSV</button></div>`;
+        html += renderGuardadas();
         html += `<button class="btn btn-verde" data-act="importar">
                     <span class="ic">📤</span><span>Importar notas desde archivo
                     <small>Excel o CSV: plantilla, exportación de SIGED o de CREA</small></span></button>`;
+        if (p.clave === 'evaluacion' && estado.filas.some(f => f.nota || f.comentario)) {
+            html += `<div style="text-align:center;margin-top:-4px"><button class="link" data-act="guardar-pagina">📋 Guardar estas notas en el asistente para cargarlas en otra evaluación</button></div>`;
+        }
         html += renderMensaje();
         if (estado.archivo) html += renderArchivo();
         return html;
@@ -1017,11 +1183,12 @@
                     ${alumnos.map(a => `<option value="${a.idx}" ${a.idx === estado.alumnoSel ? 'selected' : ''}>${escapeHtml(a.nro ? a.nro + ' - ' : '')}${escapeHtml(a.nombre)}</option>`).join('')}
                 </select></div>`;
         }
+        html += renderCopiarActividad();
         const sel = estado.alumnoSel ? alumnos.find(a => a.idx === estado.alumnoSel) : null;
         const cantEval = (sel ? [sel] : alumnos).reduce((n, a) => n + a.evaluaciones.length, 0);
         html += `<button class="btn btn-azul" data-act="exportar-detalle"><span class="ic">📥</span><span>Descargar Excel ${sel ? 'de ' + escapeHtml(sel.apellido) : 'de ' + alumnos.length + ' alumno(s)'}
                  <small>${cantEval} evaluaciones con comentarios · promedios por período · resumen</small></span></button>`;
-        html += `<div class="ayuda">El Excel tiene tres hojas: <b>Notas</b> (cada evaluación con fecha, tipo, nota, comentario y período), <b>Promedios</b> (notas por tipo, rendimiento e inasistencias de cada período) y <b>Resumen</b> (datos, semestrales y rendimiento por período).<br>
+        html += `<div class="ayuda">El Excel completo tiene tres hojas: <b>Notas</b> (cada evaluación con fecha, tipo, nota, comentario y período), <b>Promedios</b> (notas por tipo, rendimiento e inasistencias de cada período) y <b>Resumen</b> (datos, semestrales y rendimiento por período).<br>
                  Los juicios de las reuniones no están en esta página: exportalos desde <b>Pasaje de calificaciones boletín</b>.</div>`;
         return html + renderMensaje();
     }
@@ -1174,6 +1341,11 @@
             case 'aplicar': aplicarNotas(); break;
             case 'guardar': irAGuardar(); break;
             case 'exportar-detalle': exportarDetalle(); break;
+            case 'copiar-guardar': copiarActividad('guardar'); break;
+            case 'copiar-excel': copiarActividad('excel'); break;
+            case 'guardar-pagina': guardarPaginaActual(); break;
+            case 'guardadas-usar': usarGuardadas(); break;
+            case 'guardadas-olvidar': olvidarGuardadas(); break;
             case 'exportar-cierre': exportarCierreActual(); break;
             case 'recorrido-iniciar': iniciarRecorrido(); break;
             case 'recorrido-detener': detenerRecorrido(true); break;
@@ -1200,6 +1372,10 @@
             estado.tipo = el.value;
             estado.resultado = null;
             recalcularAsignacion();
+            render();
+        } else if (act === 'actividad-detalle') {
+            estado.actividadSel = el.value;
+            estado.mensaje = null;
             render();
         } else if (act === 'alumno') {
             estado.alumnoSel = el.value;
@@ -1255,6 +1431,8 @@
     // =====================================================================
     function montar() {
         if (!document.body) return;
+        // Si la página trae un panel viejo guardado en el HTML (por ejemplo, una página guardada con "Guardar como"), se quita
+        document.querySelectorAll('#siged-carga-notas-host').forEach(h => { if (h !== host) h.remove(); });
         if (!document.body.contains(host)) document.body.appendChild(host);
         refrescarPagina();
         render();
