@@ -12,5 +12,6 @@ Archivos listos para subir en el panel de desarrollador de la Chrome Web Store
 
 El ícono que usa la extensión dentro del navegador sigue siendo `icon16.png`, `icon48.png` e `icon128.png` en la raíz del proyecto.
 
-Para regenerar las imágenes se usan las páginas de SIGED guardadas con la extensión cargada en Chromium;
-las capturas llevan una banda superior con el texto de cada función.
+Las capturas reproducen la estética de SIGED (menú lateral y encabezados en azul #005680, resaltados en #ffffc0)
+sobre páginas reales guardadas, con **nombres ficticios** de alumnos, docentes e institución ("Colegio Los Ceibos").
+Llevan una banda superior con el texto de cada función.
