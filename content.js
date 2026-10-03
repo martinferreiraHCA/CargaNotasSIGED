@@ -1255,6 +1255,8 @@
     // =====================================================================
     function montar() {
         if (!document.body) return;
+        // Si la página trae un panel viejo guardado en el HTML (por ejemplo, una página guardada con "Guardar como"), se quita
+        document.querySelectorAll('#siged-carga-notas-host').forEach(h => { if (h !== host) h.remove(); });
         if (!document.body.contains(host)) document.body.appendChild(host);
         refrescarPagina();
         render();
