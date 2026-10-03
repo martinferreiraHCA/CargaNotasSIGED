@@ -104,10 +104,12 @@ Para publicar la extensión oficialmente:
    - Íconos de buena calidad
 
 3. **Crear el Paquete ZIP:**
+   - Usá el ZIP ya armado que está en la carpeta `dist/` del repositorio (`asistente-de-siged-<versión>.zip`), o generalo con:
    ```bash
-   # En la carpeta del proyecto
-   zip -r siged-extension.zip . -x "*.git*" -x "*.md" -x "test-*"
+   ./empaquetar.sh
    ```
+   - El ZIP debe tener `manifest.json` en la raíz. **No sirve el ZIP que descarga GitHub** ("Code → Download ZIP"), porque mete todo dentro de una carpeta y además incluye documentación e imágenes que no van en la extensión.
+   - Las imágenes de la ficha (ícono de tienda, capturas y mosaicos) están en `store/`.
 
 4. **Subir a Chrome Web Store:**
    - Ve al Developer Dashboard

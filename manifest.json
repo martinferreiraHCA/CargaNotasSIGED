@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "Asistente de SIGED",
   "version": "3.4",
-  "description": "Importá y exportá notas en SIGED con un panel que detecta solo en qué página estás: Evaluaciones, Boletín por libreta y Libro del Profesor. Planillas Excel/CSV y exportaciones de CREA.",
+  "description": "Importá y exportá notas, juicios y promedios en SIGED desde Excel o CSV, sin pasarlos uno por uno. Detecta sola la página.",
+  "homepage_url": "https://github.com/martinferreiraHCA/CargaNotasSIGED",
   "permissions": [
     "activeTab",
     "scripting"
