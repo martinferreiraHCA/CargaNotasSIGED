@@ -5,307 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIGED - Carga de Notas</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            width: 380px;
-            min-height: 500px;
-            padding: 20px;
+            width: 340px;
+            padding: 18px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 14px;
+            font-size: 13px;
             color: #2c3e50;
             background: #fafafa;
         }
-
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e0e0e0;
-        }
-
-        .header h1 {
-            font-size: 20px;
-            font-weight: 500;
-            color: #2c3e50;
-            margin-bottom: 4px;
-        }
-
-        .header .subtitle {
-            font-size: 12px;
-            color: #7f8c8d;
-        }
-
-        .section {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #e0e0e0;
-        }
-
-        .section-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #7f8c8d;
-            margin-bottom: 12px;
-            font-weight: 600;
-        }
-
-        .file-upload {
-            margin-bottom: 10px;
-        }
-
-        .file-label {
-            display: block;
-            padding: 12px;
-            background: #3498db;
-            color: white;
-            text-align: center;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .file-label:hover {
-            background: #2980b9;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .file-name {
-            margin-top: 8px;
-            font-size: 11px;
-            color: #7f8c8d;
-            text-align: center;
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 4px;
-        }
-
-        .info-box {
-            background: #e8f5e9;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            line-height: 1.6;
-            border-left: 3px solid #4caf50;
-        }
-
-        .info-box p {
-            margin: 4px 0;
-            color: #2e7d32;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 12px;
-            color: #5a6c7d;
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-
-        select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 13px;
-            background: white;
-            color: #2c3e50;
-            cursor: pointer;
-        }
-
-        select:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        .radio-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .radio-option {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-size: 13px;
-        }
-
-        .radio-option:hover {
-            background: #ecf0f1;
-        }
-
-        .radio-option input[type="radio"] {
-            margin-right: 10px;
-            cursor: pointer;
-            width: 16px;
-            height: 16px;
-        }
-
-        .radio-option label {
-            cursor: pointer;
-            margin: 0;
-            font-weight: 400;
-        }
-
+        .header { text-align: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 2px solid #e0e0e0; }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header .subtitle { font-size: 12px; color: #7f8c8d; margin-top: 2px; }
+        .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+        .card .etq { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #7f8c8d; font-weight: 600; margin-bottom: 4px; }
+        .card .pag { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+        .card .ctx { font-size: 12px; color: #5a6c7d; line-height: 1.5; }
         .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+            width: 100%; padding: 11px 12px; border: 0; border-radius: 8px; font-size: 13px; font-weight: 600;
+            cursor: pointer; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; text-align: left;
+            transition: transform .1s, filter .1s;
         }
-
-        .btn-primary {
-            background: #27ae60;
-            color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background: #229954;
-            transform: translateY(-1px);
-        }
-
-        .btn-primary:disabled {
-            background: #bdc3c7;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .alert {
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            font-size: 12px;
-            border-left: 3px solid;
-            line-height: 1.5;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            border-color: #28a745;
-            color: #155724;
-        }
-
-        .alert-danger {
-            background: #f8d7da;
-            border-color: #dc3545;
-            color: #721c24;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            border-color: #ffc107;
-            color: #856404;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            border-color: #17a2b8;
-            color: #0c5460;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .counter {
-            text-align: center;
-            padding: 10px;
-            background: #e3f2fd;
-            border-radius: 6px;
-            font-size: 13px;
-            color: #1565c0;
-            font-weight: 500;
-            margin-bottom: 12px;
-        }
-
-        .divider {
-            height: 1px;
-            background: #e0e0e0;
-            margin: 15px 0;
-        }
+        .btn:hover:not(:disabled) { filter: brightness(1.07); transform: translateY(-1px); }
+        .btn:disabled { opacity: .55; cursor: not-allowed; }
+        .btn .ic { font-size: 18px; }
+        .btn small { display: block; font-weight: 400; font-size: 11px; opacity: .9; }
+        .btn-azul { background: #3498db; color: #fff; }
+        .btn-verde { background: #27ae60; color: #fff; }
+        .btn-gris { background: #2c3e50; color: #fff; }
+        .msg { padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.5; border-left: 4px solid; margin-bottom: 10px; }
+        .msg-ok { background: #d4edda; border-color: #28a745; color: #155724; }
+        .msg-error { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .msg-aviso { background: #fff3cd; border-color: #ffc107; color: #856404; }
+        .msg-info { background: #d1ecf1; border-color: #17a2b8; color: #0c5460; }
+        .ayuda { font-size: 11px; color: #7f8c8d; line-height: 1.6; margin-top: 6px; }
+        .ayuda b { color: #5a6c7d; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🎓 SIGED</h1>
-        <p class="subtitle">Carga de Notas Automática</p>
+        <h1>📚 SIGED · Carga de Notas</h1>
+        <p class="subtitle">Importar y exportar notas sin pasarlas una por una</p>
     </div>
 
-    <div class="section">
-        <div class="section-title">📂 Paso 1: Cargar CSV</div>
-        <div class="file-upload">
-            <input type="file" id="csvFile" class="file-input" accept=".csv">
-            <label for="csvFile" class="file-label">Seleccionar Archivo CSV</label>
-            <div class="file-name" id="fileName">Ningún archivo seleccionado</div>
-        </div>
-
-        <div id="fileInfo" class="info-box hidden">
-            <p id="formatoInfo"></p>
-            <p id="estudiantesInfo"></p>
-            <p id="actividadesInfo"></p>
-        </div>
+    <div id="estado" class="card">
+        <div class="etq">Dónde estás</div>
+        <div class="pag" id="pagina">Detectando…</div>
+        <div class="ctx" id="contexto"></div>
     </div>
 
-    <div id="configSection" class="section hidden">
-        <div class="section-title">⚙️ Paso 2: Configurar</div>
+    <div id="alertBox"></div>
 
-        <div class="form-group">
-            <label>Actividad:</label>
-            <select id="actividadSelect">
-                <option value="">Seleccionar actividad...</option>
-            </select>
-        </div>
-
-        <div id="tipoGroup" class="form-group hidden">
-            <label>Tipo de calificación:</label>
-            <div class="radio-group">
-                <div class="radio-option">
-                    <input type="radio" name="tipo" value="individual" id="radioIndividual" checked>
-                    <label for="radioIndividual">👤 Individual</label>
-                </div>
-                <div class="radio-option">
-                    <input type="radio" name="tipo" value="equipo" id="radioEquipo">
-                    <label for="radioEquipo">👥 Por Equipo</label>
-                </div>
-            </div>
-        </div>
-
-        <div class="counter hidden" id="counter">0 estudiantes listos</div>
-    </div>
-
-    <div id="actionSection" class="section hidden">
-        <div class="section-title">🚀 Paso 3: Cargar</div>
-        
-        <div id="alertBox"></div>
-
-        <button class="btn btn-primary" id="btnCargar" disabled>
-            🚀 Cargar Notas en SIGED
+    <div id="acciones" class="hidden">
+        <button class="btn btn-gris" id="btnPanel">
+            <span class="ic">🧭</span><span>Mostrar el panel en la página<small>Ahí están los botones de importar y exportar</small></span>
         </button>
+        <button class="btn btn-azul" id="btnExportar">
+            <span class="ic">📥</span><span id="txtExportar">Descargar planilla (Excel)</span>
+        </button>
+        <button class="btn btn-verde" id="btnImportar">
+            <span class="ic">📤</span><span>Importar notas desde archivo<small>Se abre el panel para elegir el archivo</small></span>
+        </button>
+    </div>
+
+    <div class="ayuda">
+        <b>¿Cómo funciona?</b><br>
+        • En el <b>Libro del Profesor</b>: descargá la plantilla del grupo, completala con las notas.<br>
+        • En <b>Evaluaciones</b> o en el <b>Boletín</b>: importá la plantilla (o una exportación de CREA) y revisá antes de guardar.<br>
+        • También podés exportar las notas ya cargadas para pasarlas a otra evaluación.
     </div>
 
     <script src="popup.js"></script>
