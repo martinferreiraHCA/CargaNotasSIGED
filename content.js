@@ -1,600 +1,960 @@
 // ========== CONTENT SCRIPT DE SIGED ==========
-// Este script se inyecta en las páginas de SIGED y espera mensajes del popup
+// Se inyecta en todas las páginas de SIGED. Detecta automáticamente en qué
+// página está el docente y muestra un panel flotante con las acciones que
+// corresponden a esa página:
+//
+//   • Libro del Profesor .......... descargar plantilla del grupo (Excel/CSV)
+//   • Evaluaciones (escritos, parciales, etc.) .. exportar / importar notas
+//   • Pasaje de calificaciones boletín .......... exportar / importar notas y juicios
+//
+// Depende de shared/matching.js, shared/formatos.js y lib/xlsx.full.min.js
+// (se cargan antes según manifest.json).
 
-console.log('✅ SIGED Extension - Content Script cargado');
-console.log('📍 URL actual:', window.location.href);
+(function () {
+    'use strict';
 
-// Listener para mensajes del popup
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    console.log('📨 Mensaje recibido:', request.action);
-    
-    if (request.action === 'cargarNotas') {
-        try {
-            cargarNotasEnSIGED(request.entries, request.formato, request.tipo, sendResponse);
-            return true; // Mantener canal abierto para respuesta asíncrona
-        } catch (error) {
-            console.error('❌ Error general:', error);
-            sendResponse({
-                success: false,
-                error: 'Error inesperado: ' + error.message
-            });
-            return false;
+    if (window.__sigedCargaNotasInstalado) return;
+    window.__sigedCargaNotasInstalado = true;
+
+    const M = window.SigedMatching;
+    const F = window.SigedFormatos;
+    const UMBRAL_MATCH = 0.70;
+    const MAX_FILAS = 2000;
+
+    console.log('✅ SIGED - Carga de Notas: content script cargado en', location.href);
+
+    // =====================================================================
+    //  Utilidades DOM
+    // =====================================================================
+    const $id = (id) => document.getElementById(id);
+    const idx4 = (i) => String(i).padStart(4, '0');
+
+    function textoDe(el) {
+        if (!el) return '';
+        if (el.tagName === 'SELECT') {
+            const op = el.options[el.selectedIndex];
+            return op ? (op.text || '').trim() : '';
         }
-    }
-});
-
-function cargarNotasEnSIGED(entries, formato, tipo, sendResponse) {
-    console.log('🚀 Iniciando carga de notas en SIGED...');
-    console.log('📊 Entradas:', entries.length);
-    console.log('📋 Formato:', formato);
-    console.log('🎯 Tipo:', tipo);
-
-    // Verificar compatibilidad de la página
-    const url = window.location.href;
-    console.log('📍 URL actual:', url);
-
-    /**
-     * Detectar si la página es compatible con la extensión
-     * Busca los elementos característicos de SIGED en lugar de validar URL
-     */
-    function esPaginaCompatible() {
-        // Buscar elementos característicos de SIGED (primeras 5 filas)
-        const elementosNecesarios = [];
-
-        for (let i = 1; i <= 5; i++) {
-            const idx = String(i).padStart(4, '0');
-
-            // Buscar span de nombre de estudiante
-            const spanId = 'span_vFALUNOMCOM_' + idx;
-            const span = document.getElementById(spanId);
-
-            // Buscar select de calificación
-            const selectId = 'vCALIFCOD_' + idx;
-            const select = document.getElementById(selectId);
-
-            if (span || select) {
-                elementosNecesarios.push({ idx, span: !!span, select: !!select });
-            }
-        }
-
-        // La página es compatible si encuentra al menos 1 elemento
-        return elementosNecesarios.length > 0;
+        if ('value' in el && el.tagName !== 'SPAN' && el.tagName !== 'DIV') return String(el.value || '').trim();
+        return String(el.innerText || el.textContent || '').trim();
     }
 
-    if (!esPaginaCompatible()) {
-        console.error('❌ Página no compatible:', url);
-        console.error('❌ No se encontraron los elementos necesarios de SIGED');
-        console.error('💡 Esta extensión requiere una página con:');
-        console.error('   - Campos con ID: span_vFALUNOMCOM_XXXX (nombres de estudiantes)');
-        console.error('   - Campos con ID: vCALIFCOD_XXXX (calificaciones)');
+    function esVisible(el) {
+        return !!(el && el.offsetParent !== null);
+    }
 
-        sendResponse({
-            success: false,
-            error: 'Página no compatible.\n\n' +
-                   'Esta extensión funciona en páginas de SIGED que tengan:\n' +
-                   '• Tabla de estudiantes con campos de nombre\n' +
-                   '• Campos de calificación editables\n\n' +
-                   'Verifica que estés en la página correcta de ingreso de notas.'
+    function disparar(el, eventos) {
+        eventos.forEach(e => {
+            try { el.dispatchEvent(new Event(e, { bubbles: true })); } catch (err) { /* ignorar */ }
         });
-        return;
     }
 
-    console.log('✅ Página compatible detectada');
-    console.log('✅ Elementos de SIGED encontrados en la página');
-    
-    // ========== FUNCIONES AUXILIARES PARA MATCHING ROBUSTO ==========
-
-    /**
-     * Calcula la distancia de Levenshtein entre dos strings
-     * Retorna un número que indica cuántas operaciones (inserción, eliminación, sustitución)
-     * se necesitan para transformar s1 en s2
-     */
-    function levenshteinDistance(s1, s2) {
-        const len1 = s1.length;
-        const len2 = s2.length;
-        const matrix = [];
-
-        // Inicializar matriz
-        for (let i = 0; i <= len1; i++) {
-            matrix[i] = [i];
-        }
-        for (let j = 0; j <= len2; j++) {
-            matrix[0][j] = j;
-        }
-
-        // Calcular distancias
-        for (let i = 1; i <= len1; i++) {
-            for (let j = 1; j <= len2; j++) {
-                const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
-                matrix[i][j] = Math.min(
-                    matrix[i - 1][j] + 1,      // eliminación
-                    matrix[i][j - 1] + 1,      // inserción
-                    matrix[i - 1][j - 1] + cost // sustitución
-                );
-            }
-        }
-
-        return matrix[len1][len2];
+    function escapeHtml(s) {
+        return String(s === null || s === undefined ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-    /**
-     * Calcula similitud entre dos strings (0 = diferentes, 1 = idénticos)
-     * Usa Levenshtein normalizado
-     */
-    function stringSimilarity(s1, s2) {
-        if (s1 === s2) return 1.0;
-        if (s1.length === 0 || s2.length === 0) return 0.0;
-
-        const distance = levenshteinDistance(s1, s2);
-        const maxLen = Math.max(s1.length, s2.length);
-        return 1.0 - (distance / maxLen);
-    }
-
-    /**
-     * Normalización avanzada para nombres españoles
-     * Maneja: tildes, ñ, espacios, caracteres especiales, mayúsculas
-     */
-    function normalizeText(txt) {
-        return txt.normalize('NFD')
-                  .replace(/[\u0300-\u036f]/g, '')  // Eliminar tildes
-                  .replace(/[^A-Z0-9 ]+/gi, ' ')    // Solo letras, números y espacios
-                  .toUpperCase()
-                  .trim();
-    }
-
-    /**
-     * Convierte texto a tokens normalizados y ordenados
-     */
-    function tokens(txt) {
-        return normalizeText(txt)
-                  .split(/\s+/)
-                  .filter(Boolean)
-                  .sort();
-    }
-
-    /**
-     * Encuentra el mejor match entre un token y una lista de tokens
-     * Retorna: { token, similarity, index }
-     */
-    function findBestTokenMatch(searchToken, targetTokens, minSimilarity = 0.75) {
-        let bestMatch = null;
-        let bestSimilarity = minSimilarity;
-        let bestIndex = -1;
-
-        for (let i = 0; i < targetTokens.length; i++) {
-            const similarity = stringSimilarity(searchToken, targetTokens[i]);
-            if (similarity > bestSimilarity) {
-                bestSimilarity = similarity;
-                bestMatch = targetTokens[i];
-                bestIndex = i;
-            }
-        }
-
-        return { token: bestMatch, similarity: bestSimilarity, index: bestIndex };
-    }
-
-    /**
-     * Calcula score en una dirección (source → target)
-     * Busca el mejor match para cada token de source en target
-     * @private
-     */
-    function calculateDirectionalScore(sourceTokens, targetTokens) {
-        const usedIndices = new Set();
-        const details = [];
-        let totalScore = 0;
-
-        for (const sourceToken of sourceTokens) {
-            const bestMatch = findBestTokenMatch(sourceToken, targetTokens, 0);
-
-            if (bestMatch.index !== -1) {
-                usedIndices.add(bestMatch.index);
-                totalScore += bestMatch.similarity;
-                details.push({
-                    sourceToken,
-                    targetToken: bestMatch.token,
-                    similarity: bestMatch.similarity
-                });
-            } else {
-                details.push({
-                    sourceToken,
-                    targetToken: null,
-                    similarity: 0
-                });
-            }
-        }
-
-        const avgScore = sourceTokens.length > 0 ? totalScore / sourceTokens.length : 0;
-        const matchedCount = usedIndices.size;
-
-        return { avgScore, matchedCount, details };
-    }
-
-    /**
-     * Calcula score de similitud entre dos conjuntos de tokens
-     *
-     * MEJORA PARA NOMBRES PARCIALES:
-     * Maneja correctamente casos donde un sistema tiene más nombres/apellidos:
-     * - CSV: "GARCÍA PÉREZ JUAN PABLO" vs SIGED: "GARCÍA JUAN"
-     * - CSV: "RODRÍGUEZ MARÍA" vs SIGED: "RODRÍGUEZ GONZÁLEZ MARÍA JOSÉ"
-     *
-     * Estrategia bidireccional:
-     * 1. Calcula similitud CSV → SIGED
-     * 2. Calcula similitud SIGED → CSV
-     * 3. Usa scoring inteligente que favorece subsets de alta calidad
-     *
-     * @returns { score, details, direction } donde score es 0-1
-     */
-    function calculateMatchScore(csvTokens, sigedTokens) {
-        if (csvTokens.length === 0 || sigedTokens.length === 0) {
-            return { score: 0, details: [], direction: 'none' };
-        }
-
-        // Calcular scoring en ambas direcciones
-        const csvToSiged = calculateDirectionalScore(csvTokens, sigedTokens);
-        const sigedToCsv = calculateDirectionalScore(sigedTokens, csvTokens);
-
-        // Estrategia de scoring adaptativa:
-        // Si uno tiene significativamente más tokens, priorizar la dirección del más corto
-        const csvLen = csvTokens.length;
-        const sigedLen = sigedTokens.length;
-        const ratio = Math.max(csvLen, sigedLen) / Math.min(csvLen, sigedLen);
-
-        let finalScore, details, direction;
-
-        if (ratio <= 1.5) {
-            // Longitudes similares: usar promedio ponderado de ambas direcciones
-            const weight1 = 0.6;
-            const weight2 = 0.4;
-            finalScore = (csvToSiged.avgScore * weight1) + (sigedToCsv.avgScore * weight2);
-            details = csvToSiged.details;
-            direction = 'bidirectional';
-        } else {
-            // Diferencia significativa en longitud: usar la mejor dirección
-            // Esto favorece casos como "GARCÍA JUAN" matching "GARCÍA PÉREZ JUAN PABLO"
-
-            if (csvLen < sigedLen) {
-                // CSV más corto: priorizar que todos los tokens del CSV tengan match
-                // Ejemplo: CSV="GARCÍA JUAN" debe matchear bien con SIGED="GARCÍA PÉREZ JUAN PABLO"
-                finalScore = csvToSiged.avgScore;
-
-                // Bonus si todos los tokens del CSV tienen buen match
-                if (csvToSiged.matchedCount === csvLen && csvToSiged.avgScore >= 0.8) {
-                    finalScore = Math.min(1.0, finalScore * 1.1); // Bonus 10%
-                }
-
-                details = csvToSiged.details;
-                direction = 'csv-to-siged';
-            } else {
-                // SIGED más corto: priorizar que todos los tokens de SIGED tengan match
-                // Ejemplo: SIGED="GARCÍA JUAN" debe matchear bien con CSV="GARCÍA PÉREZ JUAN PABLO"
-                finalScore = sigedToCsv.avgScore;
-
-                // Bonus si todos los tokens de SIGED tienen buen match
-                if (sigedToCsv.matchedCount === sigedLen && sigedToCsv.avgScore >= 0.8) {
-                    finalScore = Math.min(1.0, finalScore * 1.1); // Bonus 10%
-                }
-
-                // Convertir details a formato esperado (desde perspectiva del CSV)
-                details = sigedToCsv.details.map(d => ({
-                    csvToken: d.targetToken,
-                    sigedToken: d.sourceToken,
-                    similarity: d.similarity
-                }));
-                direction = 'siged-to-csv';
-            }
-        }
-
-        // Penalización muy suave solo si NO hay ningún match decente
-        const hasGoodMatches = details.some(d => d.similarity >= 0.7);
-        if (!hasGoodMatches && details.length > 0) {
-            finalScore *= 0.9; // Penalización 10% si no hay ningún match decente
-        }
-
-        return {
-            score: Math.max(0, Math.min(1, finalScore)),
-            details,
-            direction,
-            csvLen,
-            sigedLen
+    function debounce(fn, ms) {
+        let t = null;
+        return function () {
+            clearTimeout(t);
+            t = setTimeout(fn, ms);
         };
     }
 
-    /**
-     * Encuentra el mejor match de una entrada CSV entre las filas de SIGED
-     * @param {Array} entries - Array de entries del CSV con propiedad 'tok'
-     * @param {Array} sigedTokens - Tokens del nombre en SIGED
-     * @param {number} minScore - Score mínimo para considerar un match (0-1)
-     * @returns {Object|null} - Entry con mejor match o null si ninguno supera minScore
-     */
-    function findBestMatch(entries, sigedTokens, minScore = 0.70) {
-        let bestEntry = null;
-        let bestScore = minScore;
-        let bestDetails = null;
+    /** Busca el primer texto no vacío entre una lista de ids (inputs o spans) */
+    function primerTexto(ids) {
+        for (const id of ids) {
+            const t = textoDe($id(id));
+            if (t) return t;
+        }
+        return '';
+    }
 
-        for (const entry of entries) {
-            const result = calculateMatchScore(entry.tok, sigedTokens);
+    /** Texto del título de la página de SIGED (sin el prefijo "LIBRETA:") */
+    function tituloPagina() {
+        const t = primerTexto(['TXTTITULO', 'span_TXTTITULO']);
+        return t.replace(/^\s*LIBRETA\s*:\s*/i, '').trim();
+    }
 
-            if (result.score > bestScore) {
-                bestScore = result.score;
-                bestEntry = entry;
-                bestDetails = result.details;
+    /** Limpia la descripción larga de la libreta: quita la evaluación y los períodos entre paréntesis */
+    function limpiarLibreta(s, evaluacion) {
+        let t = String(s || '').replace(/\([^)]*\)/g, ' ');
+        if (evaluacion) {
+            const pos = t.indexOf(' - ' + evaluacion);
+            if (pos > 0) t = t.slice(0, pos);
+        }
+        return t.replace(/\s+/g, ' ').replace(/\s*-\s*$/, '').trim();
+    }
+
+    // =====================================================================
+    //  Escritura de valores en controles de GeneXus (SIGED)
+    // =====================================================================
+
+    /** Devuelve la <option> del select que corresponde a la nota pedida (sin modificar nada) */
+    function resolverOpcion(select, valor) {
+        if (!select) return { ok: false, motivo: 'no hay campo de nota en esta fila' };
+        const v = String(valor === null || valor === undefined ? '' : valor).trim();
+        if (!v) return { ok: false, motivo: 'nota vacía' };
+        const opciones = Array.from(select.options);
+        const nv = M.normalizeText(v);
+
+        let op = opciones.find(o => o.value.trim() === v)
+              || opciones.find(o => nv && M.normalizeText(o.text) === nv);
+
+        if (!op) {
+            const n = F.notaNumero(v);
+            if (n !== null) {
+                const redondeada = String(Math.round(n));
+                op = opciones.find(o => o.value.trim() === redondeada)
+                  || opciones.find(o => o.text.trim() === redondeada);
+                if (!op) {
+                    // Opciones numéricas: ajustar al rango disponible
+                    const numericas = opciones.filter(o => o.value.trim() !== '' && !isNaN(parseFloat(o.value)));
+                    if (numericas.length) {
+                        const valores = numericas.map(o => parseFloat(o.value));
+                        const ajustada = Math.max(Math.min(...valores), Math.min(Math.max(...valores), Math.round(n)));
+                        op = numericas.find(o => parseFloat(o.value) === ajustada);
+                    }
+                }
             }
         }
 
-        if (bestEntry) {
-            return {
-                entry: bestEntry,
-                score: bestScore,
-                details: bestDetails
-            };
+        if (!op) {
+            const validas = opciones.map(o => o.text.trim()).filter(Boolean).join(', ');
+            return { ok: false, motivo: `"${v}" no es una nota válida (opciones: ${validas || 'ninguna'})` };
         }
+        return { ok: true, opcion: op, texto: (op.text || '').trim() || op.value };
+    }
 
+    function escribirSelect(select, valor) {
+        const r = resolverOpcion(select, valor);
+        if (!r.ok) return r;
+        if (select.value !== r.opcion.value) {
+            select.value = r.opcion.value;
+            disparar(select, ['change', 'blur']);
+            r.cambiado = true;
+        }
+        return r;
+    }
+
+    function escribirTexto(el, valor) {
+        if (!el) return { ok: false, motivo: 'campo no encontrado' };
+        const max = parseInt(el.getAttribute('maxlength') || '0', 10);
+        let v = String(valor === null || valor === undefined ? '' : valor);
+        let truncado = false;
+        if (max > 0 && v.length > max) { v = v.slice(0, max); truncado = true; }
+        if (el.value === v) return { ok: true, cambiado: false };
+        el.value = v;
+        disparar(el, ['input', 'change', 'blur']);
+        return { ok: true, cambiado: true, truncado };
+    }
+
+    function pintarFila(tr, color) {
+        if (!tr) return;
+        tr.style.transition = 'background-color 0.4s';
+        tr.style.backgroundColor = color;
+    }
+
+    // =====================================================================
+    //  Adaptadores de página
+    // =====================================================================
+
+    /** Recorre la grilla estándar de SIGED (span_vFALUNOMCOM_0001, 0002, ...) */
+    function leerGrilla(construirFila) {
+        const filas = [];
+        for (let i = 1; i <= MAX_FILAS; i++) {
+            const idx = idx4(i);
+            const span = $id('span_vFALUNOMCOM_' + idx);
+            if (!span) break;
+            const nombre = textoDe(span);
+            if (!nombre) continue;
+            const fila = construirFila(idx, span, nombre);
+            fila.idx = idx;
+            fila.nombre = nombre;
+            fila.tok = M.tokens(nombre);
+            filas.push(fila);
+        }
+        return filas;
+    }
+
+    const PAGINAS = {
+        // ---------------- Evaluaciones (escritos, parciales, orales, etc.) ----------------
+        evaluacion: {
+            clave: 'evaluacion',
+            etiqueta: 'Evaluaciones (ingreso de notas)',
+            icono: '📝',
+            detectar: () => !!$id('vCALIFCOD_0001'),
+            contexto() {
+                const titulo = tituloPagina();
+                // Nombre de la evaluación: probamos ids conocidos y luego cualquier id que parezca una descripción de evaluación
+                let evaluacion = primerTexto(['vEVADSC', 'span_vEVADSC', 'vEVALDSC', 'span_vEVALDSC', 'vLIBEVADSC', 'span_vLIBEVADSC',
+                                              'vEVANOM', 'span_vEVANOM', 'vEVADESC', 'span_vEVADESC', 'vDESCRIPCION', 'span_vDESCRIPCION']);
+                if (!evaluacion) {
+                    const candidatos = document.querySelectorAll('[id*="EVA"][id*="DSC"], [id*="EVA"][id*="DESC"], [id*="EVA"][id*="NOM"]');
+                    for (const el of candidatos) {
+                        if (/_\d{4}$/.test(el.id)) continue;
+                        const t = textoDe(el);
+                        if (t) { evaluacion = t; break; }
+                    }
+                }
+                const libreta = limpiarLibreta(primerTexto(['vDESCLARGA', 'span_vDESCLARGA', 'vLIBDSC', 'span_vLIBDSC']), evaluacion) || titulo;
+                return { libreta, evaluacion: evaluacion || '', titulo };
+            },
+            leerFilas() {
+                return leerGrilla((idx, span) => {
+                    const select = $id('vCALIFCOD_' + idx);
+                    const textarea = $id('vLIBDCOMENTARIO_' + idx);
+                    return {
+                        select, textarea,
+                        tr: (select || span).closest('tr'),
+                        nota: textoDe(select),
+                        comentario: textarea ? textarea.value : ''
+                    };
+                });
+            },
+            columnasExport(filas) {
+                return ['N°', 'Estudiante', 'Nota', 'Comentario'];
+            },
+            filaExport(f, i) {
+                return [i + 1, f.nombre, f.nota, f.comentario];
+            },
+            campos: { comentario: 'Comentario' },
+            aplicar(fila, entrada) {
+                const cambios = [];
+                const errores = [];
+                if (entrada.nota) {
+                    const r = escribirSelect(fila.select, entrada.nota);
+                    if (r.ok) cambios.push('nota ' + r.texto); else errores.push(r.motivo);
+                }
+                if (entrada.comentario && fila.textarea) {
+                    const r = escribirTexto(fila.textarea, entrada.comentario);
+                    if (r.ok) cambios.push('comentario'); else errores.push(r.motivo);
+                } else if (entrada.comentario && !fila.textarea) {
+                    errores.push('esta fila no tiene campo de comentario');
+                }
+                return { cambios, errores };
+            }
+        },
+
+        // ---------------- Pasaje de calificaciones boletín por libreta ----------------
+        boletin: {
+            clave: 'boletin',
+            etiqueta: 'Pasaje de calificaciones al boletín',
+            icono: '📋',
+            detectar: () => !!$id('vCALIFXREUCALIFCOD_0001'),
+            contexto() {
+                const titulo = tituloPagina();
+                const evaluacion = primerTexto(['vREUDSC', 'span_vREUDSC']) || textoDe($id('span_vREUCOD_0001'));
+                const libreta = limpiarLibreta(primerTexto(['vDESCLARGA', 'span_vDESCLARGA']), evaluacion) || titulo;
+                return { libreta, evaluacion, titulo };
+            },
+            leerFilas() {
+                return leerGrilla((idx, span) => {
+                    const select = $id('vCALIFXREUCALIFCOD_' + idx);
+                    const textarea = $id('vCALIFXREUJUICIO_' + idx);
+                    const fecha = $id('vCALIFXREUFEC_' + idx);
+                    const conducta = $id('vCALIFXREUCONCALIFCOD_' + idx);
+                    return {
+                        select, textarea, fecha, conducta,
+                        nro: textoDe($id('span_vINSGACTNROLISTA_' + idx)),
+                        tr: (select || span).closest('tr'),
+                        nota: textoDe(select),
+                        comentario: textarea ? textarea.value : '',
+                        fechaValor: fecha ? String(fecha.value || '').replace(/[\s\/]+$/, '').trim() : '',
+                        conductaValor: textoDe(conducta),
+                        juicioVisible: esVisible(textarea),
+                        fechaVisible: esVisible(fecha),
+                        conductaVisible: esVisible(conducta) && conducta.options.length > 1
+                    };
+                });
+            },
+            columnasExport(filas) {
+                const cols = ['N°', 'Estudiante', 'Nota', 'Juicio'];
+                if (filas.some(f => f.fechaVisible)) cols.push('Fecha');
+                if (filas.some(f => f.conductaVisible)) cols.push('Conducta');
+                return cols;
+            },
+            filaExport(f, i, cols) {
+                const fila = [f.nro || (i + 1), f.nombre, f.nota, f.comentario];
+                if (cols.includes('Fecha')) fila.push(/\d/.test(f.fechaValor) ? f.fechaValor : '');
+                if (cols.includes('Conducta')) fila.push(f.conductaValor);
+                return fila;
+            },
+            campos: { comentario: 'Juicio' },
+            aplicar(fila, entrada) {
+                const cambios = [];
+                const errores = [];
+                if (entrada.nota) {
+                    const r = escribirSelect(fila.select, entrada.nota);
+                    if (r.ok) cambios.push('nota ' + r.texto); else errores.push(r.motivo);
+                }
+                if (entrada.comentario) {
+                    if (fila.textarea && fila.juicioVisible) {
+                        const r = escribirTexto(fila.textarea, entrada.comentario);
+                        if (r.ok) cambios.push('juicio' + (r.truncado ? ' (recortado al máximo permitido)' : ''));
+                        else errores.push(r.motivo);
+                    } else {
+                        errores.push('esta reunión no permite juicio por asignatura');
+                    }
+                }
+                if (entrada.fecha && fila.fecha && fila.fechaVisible) {
+                    const f = F.fechaDDMMAAAA(entrada.fecha);
+                    if (f) { escribirTexto(fila.fecha, f); cambios.push('fecha ' + f); }
+                    else errores.push(`fecha "${entrada.fecha}" no reconocida (usar dd/mm/aaaa)`);
+                }
+                if (entrada.conducta && fila.conducta && fila.conductaVisible) {
+                    const r = escribirSelect(fila.conducta, entrada.conducta);
+                    if (r.ok) cambios.push('conducta ' + r.texto); else errores.push('conducta: ' + r.motivo);
+                }
+                return { cambios, errores };
+            }
+        },
+
+        // ---------------- Libro del Profesor ----------------
+        libro: {
+            clave: 'libro',
+            etiqueta: 'Libro del Profesor',
+            icono: '📚',
+            detectar: () => !!$id('vLIBIDSELEC') && (/Libro del Profesor/i.test(document.title) || !!document.querySelector('.ui.cards .card a.header')),
+            contexto() {
+                const titulo = tituloPagina();
+                const sel = $id('vLIBIDSELEC');
+                const seleccion = sel && sel.selectedIndex > 0 ? textoDe(sel) : '';
+                return { libreta: titulo || seleccion, evaluacion: '', titulo };
+            },
+            leerFilas() {
+                const filas = [];
+                document.querySelectorAll('.ui.cards .card a.header').forEach((a, i) => {
+                    const lineas = String(a.innerText || a.textContent || '').split(/\n+/).map(s => s.trim()).filter(Boolean);
+                    const apellido = lineas[0] || '';
+                    const nombre = lineas.slice(1).join(' ');
+                    const completo = `${apellido} ${nombre}`.trim();
+                    if (!completo) return;
+                    filas.push({ idx: idx4(i + 1), nombre: completo, apellido, nombrePila: nombre, tok: M.tokens(completo), nota: '', comentario: '' });
+                });
+                return filas;
+            },
+            columnasExport() {
+                return ['N°', 'Estudiante', 'Nota', 'Comentario'];
+            },
+            filaExport(f, i) {
+                return [i + 1, f.nombre, '', ''];
+            },
+            campos: { comentario: 'Comentario' },
+            aplicar: null // en esta página no se cargan notas
+        }
+    };
+
+    function detectarPagina() {
+        if (PAGINAS.boletin.detectar()) return PAGINAS.boletin;
+        if (PAGINAS.evaluacion.detectar()) return PAGINAS.evaluacion;
+        if (PAGINAS.libro.detectar()) return PAGINAS.libro;
         return null;
     }
 
-    /**
-     * Encuentra los top N mejores candidatos para un nombre de SIGED
-     * Útil para sugerencias cuando no hay match válido
-     * @param {string} nombreSiged - Nombre completo del estudiante en SIGED
-     * @param {Array} entries - Array de entries del CSV
-     * @param {number} topN - Cantidad de sugerencias a retornar
-     * @returns {Array} - Array de {entry, score, nombreOriginal} ordenados por score descendente
-     */
-    function findTopCandidates(nombreSiged, entries, topN = 3) {
-        const sigedTokens = tokens(nombreSiged);
-        const candidates = [];
+    // =====================================================================
+    //  Estado del panel
+    // =====================================================================
+    const estado = {
+        pagina: null,
+        contexto: { libreta: '', evaluacion: '', titulo: '' },
+        filas: [],
+        archivo: null,        // datos del archivo leído (SigedFormatos.leerArchivo)
+        actividad: '',
+        tipo: 'individual',
+        entradas: [],
+        asignacion: [],       // por fila de SIGED: índice de entrada o -1
+        mensaje: null,        // {tipo: 'ok'|'error'|'aviso'|'info', texto}
+        resultado: null,      // resumen tras aplicar
+        colapsado: false
+    };
 
-        for (const entry of entries) {
-            const result = calculateMatchScore(entry.tok, sigedTokens);
-            candidates.push({
-                entry: entry,
-                score: result.score,
-                nombreOriginal: entry.nombre || entry.tok.join(' ')
+    try { estado.colapsado = localStorage.getItem('sigedCargaNotas.colapsado') === '1'; } catch (e) { /* ignorar */ }
+
+    function refrescarPagina() {
+        const pagina = detectarPagina();
+        const cambioPagina = (pagina && pagina.clave) !== (estado.pagina && estado.pagina.clave);
+        estado.pagina = pagina;
+        estado.contexto = pagina ? pagina.contexto() : { libreta: '', evaluacion: '', titulo: tituloPagina() };
+        const firmaAntes = estado.firmaFilas || '';
+        estado.filas = pagina ? pagina.leerFilas() : [];
+        estado.firmaFilas = estado.filas.map(f => f.nombre).join('|');
+        const cambiaronAlumnos = firmaAntes !== estado.firmaFilas;
+        if (cambioPagina || cambiaronAlumnos) {
+            estado.resultado = null;
+            if (cambioPagina) estado.mensaje = null;
+            if (estado.archivo) recalcularAsignacion();
+        }
+        return cambioPagina || cambiaronAlumnos;
+    }
+
+    // =====================================================================
+    //  Importación
+    // =====================================================================
+    async function cargarArchivo(file) {
+        estado.resultado = null;
+        estado.mensaje = { tipo: 'info', texto: 'Leyendo archivo…' };
+        render();
+        try {
+            const datos = await F.leerArchivo(file);
+            estado.archivo = datos;
+            estado.actividad = datos.actividades.length === 1 ? datos.actividades[0] : '';
+            estado.tipo = 'individual';
+            estado.mensaje = datos.advertencia ? { tipo: 'aviso', texto: datos.advertencia } : null;
+            recalcularAsignacion();
+        } catch (err) {
+            console.error('❌ Error leyendo archivo:', err);
+            estado.archivo = null;
+            estado.entradas = [];
+            estado.asignacion = [];
+            estado.mensaje = { tipo: 'error', texto: 'No se pudo leer el archivo: ' + err.message };
+        }
+        render();
+    }
+
+    function recalcularAsignacion() {
+        if (!estado.archivo) { estado.entradas = []; estado.asignacion = []; return; }
+        const necesitaActividad = estado.archivo.actividades.length > 1 && !estado.actividad;
+        if (necesitaActividad) {
+            estado.entradas = [];
+            estado.asignacion = estado.filas.map(() => -1);
+            return;
+        }
+        estado.entradas = F.construirEntradas(estado.archivo, { actividad: estado.actividad, tipo: estado.tipo });
+        const asignado = M.asignarUnico(estado.filas, estado.entradas, UMBRAL_MATCH);
+        estado.asignacion = asignado.map(a => (a ? a.indice : -1));
+        estado.scores = asignado.map(a => (a ? a.score : 0));
+    }
+
+    function quitarArchivo() {
+        estado.archivo = null;
+        estado.entradas = [];
+        estado.asignacion = [];
+        estado.scores = [];
+        estado.resultado = null;
+        estado.mensaje = null;
+        const input = raiz.getElementById('archivo');
+        if (input) input.value = '';
+        render();
+    }
+
+    function aplicarNotas() {
+        const pagina = estado.pagina;
+        if (!pagina || !pagina.aplicar) return;
+        const usados = new Map();
+        estado.asignacion.forEach((ei, fi) => { if (ei >= 0) usados.set(ei, (usados.get(ei) || 0) + 1); });
+
+        const resultado = { aplicados: 0, sinAsignar: 0, errores: [], detalles: [] };
+        estado.filas.forEach((fila, fi) => {
+            const ei = estado.asignacion[fi];
+            if (ei < 0 || !estado.entradas[ei]) {
+                resultado.sinAsignar++;
+                return;
+            }
+            const entrada = estado.entradas[ei];
+            const r = pagina.aplicar(fila, entrada);
+            if (r.errores.length === 0 && r.cambios.length > 0) {
+                resultado.aplicados++;
+                pintarFila(fila.tr, '#e8f5e9');
+            } else if (r.errores.length > 0) {
+                resultado.errores.push(`${fila.nombre}: ${r.errores.join('; ')}`);
+                pintarFila(fila.tr, r.cambios.length ? '#fff8e1' : '#ffebee');
+                if (r.cambios.length) resultado.aplicados++;
+            }
+            resultado.detalles.push({ nombre: fila.nombre, cambios: r.cambios, errores: r.errores });
+        });
+        const duplicados = Array.from(usados.entries()).filter(([, n]) => n > 1).length;
+        if (duplicados) resultado.errores.unshift(`${duplicados} entrada(s) del archivo fueron asignadas a más de un alumno. Revisá la lista.`);
+
+        estado.resultado = resultado;
+        estado.mensaje = null;
+        console.log('📊 Resultado de la carga:', resultado);
+        render();
+    }
+
+    function irAGuardar() {
+        const btn = $id('BTNGUARDAR') || document.querySelector('input[type="button"][value="Guardar"], input[type="submit"][value="Guardar"], button.BtnGuardar');
+        if (!btn) {
+            estado.mensaje = { tipo: 'aviso', texto: 'No encontré el botón Guardar de SIGED. Buscalo en la página y hacé clic para confirmar.' };
+            render();
+            return;
+        }
+        btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const original = btn.style.boxShadow;
+        btn.style.boxShadow = '0 0 0 4px #27ae60';
+        setTimeout(() => { btn.style.boxShadow = original; }, 3000);
+    }
+
+    // =====================================================================
+    //  Exportación
+    // =====================================================================
+    function exportar(formato) {
+        const pagina = estado.pagina;
+        if (!pagina) return;
+        refrescarPagina();
+        if (estado.filas.length === 0) {
+            estado.mensaje = { tipo: 'aviso', texto: 'No hay alumnos en la página para exportar.' };
+            render();
+            return;
+        }
+        const cols = pagina.columnasExport(estado.filas);
+        const filas = estado.filas.map((f, i) => pagina.filaExport(f, i, cols));
+        const ctx = estado.contexto;
+        const hoy = new Date();
+        const fechaTxt = hoy.toLocaleDateString('es-UY');
+        const info = [
+            ['Planilla generada por', 'SIGED - Carga de Notas (extensión del navegador)'],
+            ['Página de origen', pagina.etiqueta],
+            ['Libreta', ctx.libreta || ''],
+            ['Evaluación', ctx.evaluacion || ''],
+            ['Alumnos', String(estado.filas.length)],
+            ['Fecha de exportación', fechaTxt],
+            ['', ''],
+            ['Cómo usar esta planilla', 'Completá o modificá la columna "Nota" (y "' + pagina.campos.comentario + '" si querés). ' +
+                'No cambies los nombres de los estudiantes. Luego entrá en SIGED a la página donde querés cargar las notas ' +
+                '(Evaluaciones o Pasaje de calificaciones al boletín) y usá el botón "Importar notas desde archivo".'],
+            ['Notas válidas', 'Números enteros según la escala de la evaluación (por ejemplo 1 a 10). Si ponés decimales se redondean.']
+        ];
+        const nombreBase = [
+            pagina.clave === 'libro' ? 'Plantilla' : 'Notas',
+            ctx.libreta,
+            ctx.evaluacion,
+            hoy.toISOString().slice(0, 10)
+        ];
+        try {
+            const nombre = F.descargarPlanilla({
+                encabezados: cols,
+                filas,
+                info,
+                nombreBase,
+                formato,
+                anchos: cols.map(c => (c === 'Estudiante' ? 38 : (c === 'Comentario' || c === 'Juicio') ? 60 : 12))
             });
+            estado.mensaje = { tipo: 'ok', texto: `Archivo descargado: ${nombre}` };
+        } catch (err) {
+            console.error('❌ Error exportando:', err);
+            estado.mensaje = { tipo: 'error', texto: 'No se pudo generar el archivo: ' + err.message };
         }
-
-        // Ordenar por score descendente y tomar los top N
-        candidates.sort((a, b) => b.score - a.score);
-        return candidates.slice(0, topN);
+        render();
     }
 
-    // Buscar campos en la página
-    let procesados = 0;
-    let encontrados = 0;
-    const errores = [];
-    const coincidencias = [];
-    const sinMatch = [];  // Estudiantes de SIGED sin match con sugerencias
-
-    console.log('🔍 Buscando campos en la página...');
-    
-    for (let i = 1; i <= 60; i++) {
-        const idx = String(i).padStart(4, '0');
-        
-        // Buscar el span con el nombre del estudiante
-        const spanId = 'span_vFALUNOMCOM_' + idx;
-        const span = document.getElementById(spanId);
-        
-        if (!span) {
-            // No hay más filas
-            if (i === 1) {
-                console.warn('⚠️ No se encontró ningún campo de estudiante');
-                console.warn('⚠️ Verifica que estés en la página de calificaciones de SIGED');
-            }
-            continue;
+    // =====================================================================
+    //  Panel flotante (Shadow DOM para no mezclar estilos con SIGED)
+    // =====================================================================
+    const host = document.createElement('div');
+    host.id = 'siged-carga-notas-host';
+    // Abajo a la izquierda para no tapar otros paneles que SIGED o el docente tengan a la derecha.
+    host.style.cssText = 'all: initial; position: fixed; z-index: 2147483000; left: 16px; bottom: 16px;';
+    try {
+        const pos = JSON.parse(localStorage.getItem('sigedCargaNotas.posicion') || 'null');
+        if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
+            host.style.left = Math.min(pos.left, Math.max(0, window.innerWidth - 80)) + 'px';
+            host.style.top = Math.min(pos.top, Math.max(0, window.innerHeight - 40)) + 'px';
+            host.style.bottom = 'auto';
         }
-        
-        procesados++;
-        const nombreEnPagina = span.innerText || span.textContent;
-        
-        if (!nombreEnPagina || nombreEnPagina.trim() === '') {
-            continue;
+    } catch (e) { /* ignorar */ }
+    const raiz = host.attachShadow({ mode: 'open' });
+
+    const CSS = `
+        :host { all: initial; }
+        * { box-sizing: border-box; }
+        .panel { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 13px; color: #2c3e50;
+                 width: 380px; max-height: calc(100vh - 40px); display: flex; flex-direction: column;
+                 background: #fafafa; border: 1px solid #d5dbe0; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.25); overflow: hidden; }
+        .cabecera { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px;
+                    background: #2c3e50; color: #fff; cursor: move; user-select: none; }
+        .cabecera .titulo { font-weight: 600; font-size: 14px; }
+        .cabecera button { background: rgba(255,255,255,0.15); color: #fff; border: 0; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: 16px; line-height: 1; }
+        .cabecera button:hover { background: rgba(255,255,255,0.3); }
+        .cuerpo { padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .donde { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 12px; }
+        .donde .etq { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #7f8c8d; font-weight: 600; margin-bottom: 4px; }
+        .donde .pag { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+        .donde .ctx { color: #5a6c7d; font-size: 12px; line-height: 1.5; }
+        .btn { width: 100%; padding: 11px 12px; border: 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-align: left;
+               display: flex; align-items: center; gap: 10px; transition: transform .1s, filter .1s; }
+        .btn:hover:not(:disabled) { filter: brightness(1.07); transform: translateY(-1px); }
+        .btn:disabled { opacity: .55; cursor: not-allowed; }
+        .btn .ic { font-size: 18px; }
+        .btn small { display: block; font-weight: 400; font-size: 11px; opacity: .9; }
+        .btn-azul { background: #3498db; color: #fff; }
+        .btn-verde { background: #27ae60; color: #fff; }
+        .btn-gris { background: #ecf0f1; color: #2c3e50; }
+        .btn-rojo { background: #e74c3c; color: #fff; }
+        .fila-btns { display: flex; gap: 8px; }
+        .fila-btns .btn { padding: 8px 10px; font-size: 12px; }
+        .link { background: none; border: 0; color: #2980b9; cursor: pointer; font-size: 12px; padding: 0; text-decoration: underline; }
+        .msg { padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.5; border-left: 4px solid; }
+        .msg-ok { background: #d4edda; border-color: #28a745; color: #155724; }
+        .msg-error { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .msg-aviso { background: #fff3cd; border-color: #ffc107; color: #856404; }
+        .msg-info { background: #d1ecf1; border-color: #17a2b8; color: #0c5460; }
+        .caja { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+        .caja .tit { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #7f8c8d; font-weight: 600; }
+        label { font-size: 12px; color: #5a6c7d; font-weight: 500; display: block; margin-bottom: 4px; }
+        select, input[type=text] { width: 100%; padding: 7px 8px; border: 1px solid #ccd3d9; border-radius: 6px; font-size: 12px; background: #fff; color: #2c3e50; }
+        .radios { display: flex; gap: 12px; font-size: 12px; }
+        .radios label { display: flex; align-items: center; gap: 4px; margin: 0; cursor: pointer; }
+        table.prev { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table.prev th { text-align: left; font-size: 10px; text-transform: uppercase; color: #7f8c8d; padding: 4px 4px; border-bottom: 1px solid #e0e0e0; }
+        table.prev td { padding: 4px 4px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+        table.prev tr.sin td { background: #fff8e1; }
+        table.prev tr.inv td { background: #ffebee; }
+        table.prev select { padding: 4px; font-size: 11px; }
+        .nota { font-weight: 700; text-align: center; min-width: 34px; white-space: nowrap; }
+        .accion { position: sticky; bottom: -12px; background: #fafafa; padding: 8px 0 12px; margin-bottom: -12px; border-top: 1px solid #e0e0e0; }
+        .nota.mal { color: #c0392b; font-weight: 600; font-size: 10px; }
+        .alumno { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .contador { text-align: center; padding: 8px; background: #e3f2fd; border-radius: 6px; color: #1565c0; font-weight: 600; font-size: 12px; }
+        details summary { cursor: pointer; font-size: 12px; color: #5a6c7d; }
+        ul.lista { margin: 4px 0 0 16px; padding: 0; font-size: 11px; color: #5a6c7d; line-height: 1.5; }
+        .pill { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #2c3e50; color: #fff; border: 0; border-radius: 999px;
+                padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.3); display: flex; align-items: center; gap: 8px; }
+        .pill:hover { background: #34495e; }
+        .punto { width: 9px; height: 9px; border-radius: 50%; background: #95a5a6; display: inline-block; }
+        .punto.on { background: #2ecc71; }
+        .ayuda { font-size: 11px; color: #7f8c8d; line-height: 1.5; }
+    `;
+
+    raiz.innerHTML = `
+        <style>${CSS}</style>
+        <div id="contenedor"></div>
+        <input type="file" id="archivo" accept=".xlsx,.xls,.xlsm,.ods,.csv,.txt" style="display:none">
+    `;
+
+    function render() {
+        const cont = raiz.getElementById('contenedor');
+        if (estado.colapsado) {
+            const activo = !!estado.pagina;
+            cont.innerHTML = `<button class="pill" data-act="expandir" title="Abrir el panel de carga de notas">
+                                <span class="punto ${activo ? 'on' : ''}"></span> 📚 Carga de Notas
+                              </button>`;
+            return;
         }
-        
-        const rowTok = tokens(nombreEnPagina);
+        cont.innerHTML = `
+            <div class="panel">
+                <div class="cabecera" id="cabecera">
+                    <span class="titulo">📚 Carga de Notas SIGED</span>
+                    <button data-act="colapsar" title="Minimizar">–</button>
+                </div>
+                <div class="cuerpo">${renderCuerpo()}</div>
+            </div>`;
+        activarArrastre();
+    }
 
-        // Usar fuzzy matching para encontrar el mejor match
-        // minScore = 0.70 significa que se requiere al menos 70% de similitud
-        const matchResult = findBestMatch(entries, rowTok, 0.70);
-
-        if (!matchResult) {
-            // No hay match válido - buscar sugerencias
-            const sugerencias = findTopCandidates(nombreEnPagina, entries, 3);
-
-            sinMatch.push({
-                nombre: nombreEnPagina,
-                tokens: rowTok,
-                sugerencias: sugerencias
-            });
-
-            console.log(`⚠️ Sin match: "${nombreEnPagina}" [${rowTok.join(' ')}]`);
-
-            // Mostrar sugerencias en consola
-            if (sugerencias.length > 0 && sugerencias[0].score > 0.4) {
-                console.log(`   💡 Sugerencias (requiere ≥70% para match automático):`);
-                sugerencias.forEach((sug, idx) => {
-                    const percent = (sug.score * 100).toFixed(1);
-                    console.log(`      ${idx + 1}. ${sug.nombreOriginal} (${percent}%)`);
-                });
-            }
-
-            continue;
+    function renderDonde() {
+        const p = estado.pagina;
+        const ctx = estado.contexto;
+        if (!p) {
+            return `<div class="donde">
+                        <div class="etq">Dónde estás</div>
+                        <div class="pag">Esta página no tiene notas para cargar</div>
+                        <div class="ctx">Entrá en SIGED a <b>Libreta → Evaluaciones</b>, <b>Pasaje de calificaciones al boletín</b> o al <b>Libro del Profesor</b> y el panel se activará solo.</div>
+                    </div>`;
         }
+        const partes = [];
+        if (ctx.libreta) partes.push(`<b>Libreta:</b> ${escapeHtml(ctx.libreta)}`);
+        if (ctx.evaluacion) partes.push(`<b>Evaluación:</b> ${escapeHtml(ctx.evaluacion)}`);
+        partes.push(`<b>Alumnos:</b> ${estado.filas.length}`);
+        return `<div class="donde">
+                    <div class="etq">Dónde estás</div>
+                    <div class="pag">${p.icono} ${escapeHtml(p.etiqueta)}</div>
+                    <div class="ctx">${partes.join('<br>')}</div>
+                </div>`;
+    }
 
-        const match = matchResult.entry;
-        const score = matchResult.score;
+    function renderMensaje() {
+        if (!estado.mensaje) return '';
+        return `<div class="msg msg-${estado.mensaje.tipo}">${escapeHtml(estado.mensaje.texto)}</div>`;
+    }
 
-        encontrados++;
-        coincidencias.push({
-            nombre: nombreEnPagina,
-            nota: match.nota,
-            comentario: match.com,
-            score: score
-        });
+    function renderCuerpo() {
+        const p = estado.pagina;
+        let html = renderDonde();
+        if (!p) return html + renderMensaje();
 
-        // Logging mejorado con score de similitud
-        const scorePercent = (score * 100).toFixed(1);
-        const scoreEmoji = score >= 0.95 ? '✅' : score >= 0.85 ? '✓' : '⚠️';
-        console.log(`${scoreEmoji} Match #${encontrados}: "${nombreEnPagina}" → Nota: ${match.nota} (Similitud: ${scorePercent}%)`);
-
-        // Mostrar detalles si la similitud no es perfecta
-        if (score < 0.95 && procesados <= 10) {
-            console.log(`  📊 Tokens CSV (${match.tok.length}): [${match.tok.join(', ')}]`);
-            console.log(`  📊 Tokens SIGED (${rowTok.length}): [${rowTok.join(', ')}]`);
-
-            // Mostrar información sobre matching direccional si hay diferencia de longitud
-            if (matchResult.direction && match.tok.length !== rowTok.length) {
-                const diffInfo = match.tok.length < rowTok.length
-                    ? '📝 CSV tiene menos tokens → Match basado en subset'
-                    : '📝 SIGED tiene menos tokens → Match basado en subset';
-                console.log(`  ${diffInfo}`);
-            }
-
-            if (matchResult.details) {
-                const detailsStr = matchResult.details
-                    .map(d => `${d.csvToken || d.sourceToken}≈${d.sigedToken || d.targetToken || 'N/A'}(${(d.similarity * 100).toFixed(0)}%)`)
-                    .join(', ');
-                console.log(`  🔍 Detalles: ${detailsStr}`);
-            }
-        }
-        
-        // Cargar la nota en el select
-        const selectId = 'vCALIFCOD_' + idx;
-        const selectElement = document.getElementById(selectId);
-        
-        if (selectElement) {
-            selectElement.value = match.nota;
-            selectElement.dispatchEvent(new Event('change', { bubbles: true }));
-            console.log(`  ✓ Nota cargada en ${selectId}`);
-        } else {
-            errores.push(`Campo de nota no encontrado para: ${nombreEnPagina}`);
-            console.warn(`  ⚠️ Select no encontrado: ${selectId}`);
-        }
-        
-        // Cargar comentario si existe
-        if (match.com && match.com.trim() !== '') {
-            const textareaId = 'vLIBDCOMENTARIO_' + idx;
-            const textarea = document.getElementById(textareaId);
-            
-            if (textarea) {
-                textarea.value = match.com;
-                textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                console.log(`  ✓ Comentario cargado: "${match.com.substring(0, 30)}..."`);
+        const xlsx = F.tieneXLSX();
+        if (p.clave === 'libro') {
+            if (estado.filas.length === 0) {
+                html += `<div class="msg msg-aviso">Seleccioná una libreta para ver los alumnos del grupo.</div>`;
             } else {
-                console.warn(`  ⚠️ Campo de comentario no encontrado: ${textareaId}`);
+                html += `<button class="btn btn-azul" data-act="exportar" data-formato="${xlsx ? 'xlsx' : 'csv'}">
+                            <span class="ic">📥</span><span>Descargar plantilla del grupo${xlsx ? ' (Excel)' : ' (CSV)'}
+                            <small>Lista de alumnos con columnas Nota y Comentario para completar</small></span></button>`;
+                if (xlsx) html += `<div style="text-align:center"><button class="link" data-act="exportar" data-formato="csv">Prefiero descargarla en CSV</button></div>`;
+                html += `<div class="ayuda">1. Completá la columna <b>Nota</b> en la plantilla.<br>
+                         2. Entrá en SIGED a la evaluación (o al boletín) donde van esas notas.<br>
+                         3. Usá <b>Importar notas desde archivo</b> y revisá antes de guardar.</div>`;
             }
+            return html + renderMensaje();
         }
-    }
-    
-    // Resumen de la operación
-    console.log('');
-    console.log('========== RESUMEN ==========');
-    console.log(`📊 Filas procesadas: ${procesados}`);
-    console.log(`✅ Coincidencias encontradas: ${encontrados}`);
-    console.log(`❌ Sin coincidencia: ${sinMatch.length}`);
-    console.log(`📝 Entradas enviadas: ${entries.length}`);
-    console.log(`⚠️ Errores: ${errores.length}`);
-    console.log('============================');
 
-    if (errores.length > 0) {
-        console.warn('⚠️ Errores encontrados:');
-        errores.forEach(err => console.warn('  - ' + err));
+        // Páginas de carga: evaluación y boletín
+        html += `<button class="btn btn-azul" data-act="exportar" data-formato="${xlsx ? 'xlsx' : 'csv'}">
+                    <span class="ic">📥</span><span>Descargar notas de esta página${xlsx ? ' (Excel)' : ' (CSV)'}
+                    <small>Para guardarlas o pasarlas a otra evaluación</small></span></button>`;
+        if (xlsx) html += `<div style="text-align:center;margin-top:-4px"><button class="link" data-act="exportar" data-formato="csv">Descargar en CSV</button></div>`;
+        html += `<button class="btn btn-verde" data-act="importar">
+                    <span class="ic">📤</span><span>Importar notas desde archivo
+                    <small>Excel o CSV: plantilla, exportación de SIGED o de CREA</small></span></button>`;
+        html += renderMensaje();
+        if (estado.archivo) html += renderArchivo();
+        return html;
     }
 
-    // Mostrar sugerencias detalladas para estudiantes sin match
-    if (sinMatch.length > 0) {
-        console.log('');
-        console.log('========== SUGERENCIAS PARA ESTUDIANTES SIN MATCH ==========');
-        console.log(`Se encontraron ${sinMatch.length} estudiante(s) en SIGED sin match automático (requiere ≥70% similitud)`);
-        console.log('A continuación se muestran los candidatos más cercanos del CSV:');
-        console.log('');
+    function renderArchivo() {
+        const d = estado.archivo;
+        const p = estado.pagina;
+        let html = `<div class="caja">
+            <div class="tit">Archivo cargado</div>
+            <div><b>${escapeHtml(d.nombreArchivo)}</b><br>
+                 <span class="ayuda">${d.filas.length} filas · ${d.estudiantes} estudiantes${d.formato !== 'universal' ? ' · formato ' + escapeHtml(d.formato) : ''}
+                 · <button class="link" data-act="quitar">quitar</button></span></div>`;
 
-        sinMatch.forEach((item, idx) => {
-            console.log(`${idx + 1}. 🔴 SIGED: "${item.nombre}"`);
+        if (d.actividades.length > 1) {
+            html += `<div><label>¿Qué evaluación del archivo querés cargar?</label>
+                     <select data-act="actividad">
+                        <option value="">Elegí una…</option>
+                        ${d.actividades.map(a => `<option value="${escapeHtml(a)}" ${a === estado.actividad ? 'selected' : ''}>${escapeHtml(a)}</option>`).join('')}
+                     </select></div>`;
+        }
+        if (d.requiereTipo) {
+            html += `<div><label>Tipo de nota</label>
+                     <div class="radios">
+                        <label><input type="radio" name="tipo" value="individual" data-act="tipo" ${estado.tipo === 'individual' ? 'checked' : ''}> 👤 Individual</label>
+                        <label><input type="radio" name="tipo" value="equipo" data-act="tipo" ${estado.tipo === 'equipo' ? 'checked' : ''}> 👥 Por equipo</label>
+                     </div></div>`;
+        }
+        html += `</div>`;
 
-            if (item.sugerencias.length > 0) {
-                console.log('   Candidatos del CSV:');
-                item.sugerencias.forEach((sug, sugIdx) => {
-                    const percent = (sug.score * 100).toFixed(1);
-                    const emoji = sug.score >= 0.60 ? '🟡' : sug.score >= 0.40 ? '🟠' : '⚪';
-                    console.log(`   ${emoji} ${sugIdx + 1}. ${sug.nombreOriginal} - Similitud: ${percent}%`);
-                });
-            } else {
-                console.log('   ⚠️ No hay candidatos cercanos en el CSV');
+        if (d.actividades.length > 1 && !estado.actividad) return html;
+        if (estado.entradas.length === 0) {
+            return html + `<div class="msg msg-aviso">El archivo no tiene notas para cargar${estado.actividad ? ' en "' + escapeHtml(estado.actividad) + '"' : ''}.</div>`;
+        }
+        return html + renderPrevisualizacion();
+    }
+
+    function renderPrevisualizacion() {
+        const p = estado.pagina;
+        const entradas = estado.entradas;
+        const usados = new Map();
+        estado.asignacion.forEach(ei => { if (ei >= 0) usados.set(ei, (usados.get(ei) || 0) + 1); });
+
+        let listos = 0;
+        let invalidas = 0;
+        const filasHtml = estado.filas.map((fila, fi) => {
+            const ei = estado.asignacion[fi];
+            const entrada = ei >= 0 ? entradas[ei] : null;
+            let notaHtml = '<td class="nota">—</td>';
+            let clase = entrada ? '' : 'sin';
+            if (entrada) {
+                if (entrada.nota) {
+                    const r = resolverOpcion(fila.select, entrada.nota);
+                    if (r.ok) { notaHtml = `<td class="nota" title="${escapeHtml(entrada.nota)}">${escapeHtml(r.texto)}</td>`; listos++; }
+                    else { notaHtml = `<td class="nota mal" title="${escapeHtml(r.motivo)}">⚠ ${escapeHtml(entrada.nota)}</td>`; clase = 'inv'; invalidas++; }
+                } else {
+                    notaHtml = `<td class="nota" title="Solo ${p.campos.comentario.toLowerCase()}">💬</td>`; listos++;
+                }
+                if (usados.get(ei) > 1) clase = 'inv';
             }
-            console.log('');
-        });
+            const opciones = entradas.map((e, i) =>
+                `<option value="${i}" ${i === ei ? 'selected' : ''}>${escapeHtml(e.nombre)}${e.nota ? ' → ' + escapeHtml(e.nota) : ''}</option>`).join('');
+            const score = estado.scores && estado.scores[fi] ? ` (${Math.round(estado.scores[fi] * 100)}%)` : '';
+            const comentario = entrada && entrada.comentario ? ' 💬' : '';
+            return `<tr class="${clase}">
+                        <td class="alumno" title="${escapeHtml(fila.nombre)}${score}">${escapeHtml(fila.nombre)}</td>
+                        <td><select data-act="asignar" data-fila="${fi}" title="Entrada del archivo para este alumno${score}">
+                                <option value="-1">— sin nota —</option>${opciones}</select></td>
+                        ${notaHtml.replace('</td>', comentario + '</td>')}
+                    </tr>`;
+        }).join('');
 
-        console.log('💡 TIP: Si alguna sugerencia es correcta, verifica:');
-        console.log('   - Que los nombres estén escritos correctamente en ambos sistemas');
-        console.log('   - Considera ajustar el umbral si hay muchos errores de ortografía');
-        console.log('============================================================');
-    }
-    
-    if (encontrados === 0) {
-        // No se encontró ninguna coincidencia
-        let mensajeError = 'No se encontraron coincidencias. ';
-        
-        if (procesados === 0) {
-            mensajeError += 'Verifica que estés en la página de calificaciones de SIGED con la tabla de estudiantes visible.';
+        const noUsadas = entradas.map((e, i) => ({ e, i })).filter(x => !usados.has(x.i));
+        const sinAsignar = estado.asignacion.filter(ei => ei < 0).length;
+
+        let html = `<div class="caja">
+            <div class="tit">Revisá antes de cargar</div>
+            <div class="contador">${listos} de ${estado.filas.length} alumnos recibirán nota</div>`;
+        if (sinAsignar) html += `<div class="msg msg-aviso">${sinAsignar} alumno(s) de SIGED sin nota en el archivo (filas amarillas). Podés elegir la entrada correcta a mano en cada fila.</div>`;
+        if (invalidas) html += `<div class="msg msg-error">${invalidas} nota(s) no válidas para esta página (filas rojas). Corregilas en el archivo o dejalas sin asignar.</div>`;
+        html += `<div style="max-height:220px;overflow:auto"><table class="prev">
+                    <thead><tr><th>Alumno en SIGED</th><th>Del archivo</th><th>Nota</th></tr></thead>
+                    <tbody>${filasHtml}</tbody></table></div>`;
+        if (noUsadas.length) {
+            html += `<details><summary>${noUsadas.length} entrada(s) del archivo sin alumno en SIGED</summary>
+                     <ul class="lista">${noUsadas.map(x => `<li>${escapeHtml(x.e.nombre)}${x.e.nota ? ' → ' + escapeHtml(x.e.nota) : ''}</li>`).join('')}</ul></details>`;
+        }
+        html += `</div>`;
+
+        if (estado.resultado) {
+            const r = estado.resultado;
+            html += `<div class="msg msg-ok"><b>✅ ${r.aplicados} nota(s) cargadas en la página.</b><br>
+                     ⚠️ Todavía no están guardadas: revisá la grilla y hacé clic en <b>Guardar</b> en SIGED.</div>`;
+            if (r.errores.length) {
+                html += `<details open><summary>${r.errores.length} problema(s)</summary><ul class="lista">${r.errores.map(e => `<li>${escapeHtml(e)}</li>`).join('')}</ul></details>`;
+            }
+            html += `<div class="accion"><button class="btn btn-verde" data-act="guardar"><span class="ic">💾</span><span>Ir al botón Guardar de SIGED<small>Te lleva al botón y lo resalta. El guardado lo hacés vos.</small></span></button></div>`;
         } else {
-            mensajeError += `Se procesaron ${procesados} estudiantes pero ninguno coincidió con los datos del CSV.`;
+            html += `<div class="accion"><button class="btn btn-verde" data-act="aplicar" ${listos === 0 ? 'disabled' : ''}>
+                        <span class="ic">✅</span><span>Cargar ${listos} nota(s) en la página<small>Después vas a tener que hacer clic en Guardar en SIGED</small></span></button></div>`;
         }
-        
-        console.error('❌', mensajeError);
-        sendResponse({
-            success: false,
-            error: mensajeError
+        return html;
+    }
+
+    // ---------- eventos del panel ----------
+    raiz.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('[data-act]');
+        if (!btn || btn.tagName === 'SELECT' || btn.tagName === 'INPUT') return;
+        const act = btn.dataset.act;
+        switch (act) {
+            case 'colapsar': setColapsado(true); break;
+            case 'expandir': setColapsado(false); break;
+            case 'exportar': exportar(btn.dataset.formato); break;
+            case 'importar': raiz.getElementById('archivo').click(); break;
+            case 'quitar': quitarArchivo(); break;
+            case 'aplicar': aplicarNotas(); break;
+            case 'guardar': irAGuardar(); break;
+        }
+    });
+
+    raiz.addEventListener('change', (ev) => {
+        const el = ev.target;
+        if (el.id === 'archivo') {
+            const file = el.files && el.files[0];
+            if (file) cargarArchivo(file);
+            return;
+        }
+        const act = el.dataset.act;
+        if (act === 'actividad') {
+            estado.actividad = el.value;
+            estado.resultado = null;
+            recalcularAsignacion();
+            render();
+        } else if (act === 'tipo') {
+            estado.tipo = el.value;
+            estado.resultado = null;
+            recalcularAsignacion();
+            render();
+        } else if (act === 'asignar') {
+            const fi = parseInt(el.dataset.fila, 10);
+            estado.asignacion[fi] = parseInt(el.value, 10);
+            if (estado.scores) estado.scores[fi] = 0;
+            estado.resultado = null;
+            render();
+        }
+    });
+
+    function setColapsado(valor) {
+        estado.colapsado = valor;
+        try { localStorage.setItem('sigedCargaNotas.colapsado', valor ? '1' : '0'); } catch (e) { /* ignorar */ }
+        render();
+    }
+
+    function activarArrastre() {
+        const cab = raiz.getElementById('cabecera');
+        if (!cab) return;
+        let inicio = null;
+        cab.addEventListener('mousedown', (ev) => {
+            if (ev.target.tagName === 'BUTTON') return;
+            const rect = host.getBoundingClientRect();
+            inicio = { x: ev.clientX, y: ev.clientY, left: rect.left, top: rect.top };
+            ev.preventDefault();
         });
-        return;
+        const mover = (ev) => {
+            if (!inicio) return;
+            const left = Math.max(0, Math.min(window.innerWidth - 60, inicio.left + ev.clientX - inicio.x));
+            const top = Math.max(0, Math.min(window.innerHeight - 40, inicio.top + ev.clientY - inicio.y));
+            host.style.left = left + 'px';
+            host.style.top = top + 'px';
+            host.style.right = 'auto';
+            host.style.bottom = 'auto';
+        };
+        const soltar = () => {
+            if (!inicio) return;
+            inicio = null;
+            try {
+                localStorage.setItem('sigedCargaNotas.posicion', JSON.stringify({ left: parseFloat(host.style.left), top: parseFloat(host.style.top) }));
+            } catch (e) { /* ignorar */ }
+        };
+        document.addEventListener('mousemove', mover);
+        document.addEventListener('mouseup', soltar);
     }
-    
-    // Mostrar alerta de confirmación en la página
-    let resumen = `✅ NOTAS CARGADAS EN SIGED\n\n` +
-                  `📊 ${encontrados} de ${procesados} estudiantes procesados\n` +
-                  `📝 ${entries.length} entradas enviadas\n`;
 
-    // Agregar información sobre estudiantes sin match
-    if (sinMatch.length > 0) {
-        resumen += `\n❌ ${sinMatch.length} estudiante(s) en SIGED sin match\n`;
-        resumen += `💡 Revisa la consola (F12) para ver sugerencias\n`;
+    // =====================================================================
+    //  Arranque, observador de cambios y mensajes del popup
+    // =====================================================================
+    function montar() {
+        if (!document.body) return;
+        if (!document.body.contains(host)) document.body.appendChild(host);
+        refrescarPagina();
+        render();
+    }
 
-        // Mostrar primeros 3 estudiantes sin match
-        const mostrar = Math.min(3, sinMatch.length);
-        resumen += `\nEstudiantes sin match:\n`;
-        for (let i = 0; i < mostrar; i++) {
-            resumen += `• ${sinMatch[i].nombre}\n`;
-            if (sinMatch[i].sugerencias.length > 0) {
-                const mejorSug = sinMatch[i].sugerencias[0];
-                const percent = (mejorSug.score * 100).toFixed(0);
-                resumen += `  Mejor candidato: ${mejorSug.nombreOriginal} (${percent}%)\n`;
+    const observador = new MutationObserver(debounce(() => {
+        if (refrescarPagina()) render();
+    }, 400));
+
+    function iniciar() {
+        montar();
+        observador.observe(document.body, { childList: true, subtree: true });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciar);
+    } else {
+        iniciar();
+    }
+
+    function resumenEstado() {
+        return {
+            pagina: estado.pagina ? estado.pagina.clave : null,
+            etiqueta: estado.pagina ? estado.pagina.etiqueta : 'Página sin notas para cargar',
+            icono: estado.pagina ? estado.pagina.icono : '🔎',
+            contexto: estado.contexto,
+            alumnos: estado.filas.length,
+            colapsado: estado.colapsado
+        };
+    }
+
+    try {
+        chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
+            switch (req && req.action) {
+                case 'estadoPagina':
+                    refrescarPagina();
+                    sendResponse(resumenEstado());
+                    break;
+                case 'mostrarPanel':
+                    montar();
+                    setColapsado(false);
+                    sendResponse({ ok: true });
+                    break;
+                case 'ocultarPanel':
+                    setColapsado(true);
+                    sendResponse({ ok: true });
+                    break;
+                case 'exportar':
+                    montar();
+                    setColapsado(false);
+                    exportar(req.formato);
+                    sendResponse({ ok: true });
+                    break;
+                case 'importar':
+                    // El selector de archivos solo puede abrirse con un clic del usuario en la página,
+                    // así que mostramos el panel y le indicamos qué botón usar.
+                    montar();
+                    setColapsado(false);
+                    estado.mensaje = { tipo: 'info', texto: 'Hacé clic en "Importar notas desde archivo" y elegí tu planilla.' };
+                    render();
+                    sendResponse({ ok: true });
+                    break;
+                default:
+                    return false;
             }
-        }
-        if (sinMatch.length > 3) {
-            resumen += `... y ${sinMatch.length - 3} más\n`;
-        }
+            return false;
+        });
+    } catch (e) {
+        console.warn('SIGED - Carga de Notas: no se pudo registrar el canal con el popup', e);
     }
-
-    resumen += `\n⚠️ IMPORTANTE: Revisa las notas y haz clic en GUARDAR en SIGED`;
-
-    alert(resumen);
-    
-    // Enviar respuesta exitosa
-    sendResponse({
-        success: true,
-        count: encontrados,
-        processed: procesados,
-        unmatched: sinMatch.length,
-        errors: errores,
-        matches: coincidencias,
-        suggestions: sinMatch
-    });
-}
-
-// Log cuando la página carga
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('📄 Página SIGED cargada y lista');
-    });
-} else {
-    console.log('📄 Página SIGED ya estaba cargada');
-}
+})();
