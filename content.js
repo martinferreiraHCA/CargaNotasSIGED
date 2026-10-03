@@ -128,6 +128,18 @@
         return { ok: true, opcion: op, texto: (op.text || '').trim() || op.value };
     }
 
+    /** Calificación tipo semáforo (Calificaciones Libreta con "Tipo de calificación: Semáforo") */
+    const SEMAFORO = { V: 'Verde', A: 'Amarillo', R: 'Rojo', S: 'Sin calificar' };
+
+    function resolverSemaforo(radios, valor) {
+        const v = M.normalizeText(valor);
+        if (!v) return { ok: false, motivo: 'nota vacía' };
+        const letra = { V: 'V', VERDE: 'V', A: 'A', AMARILLO: 'A', R: 'R', ROJO: 'R', S: 'S', SIN: 'S', 'SIN CALIFICAR': 'S' }[v];
+        const radio = letra ? radios.find(r => r.value === letra) : null;
+        if (!radio) return { ok: false, motivo: `"${valor}" no es un valor de semáforo (usar Verde, Amarillo o Rojo)` };
+        return { ok: true, radio, texto: SEMAFORO[letra] };
+    }
+
     function escribirSelect(select, valor) {
         const r = resolverOpcion(select, valor);
         if (!r.ok) return r;
@@ -180,7 +192,7 @@
     }
 
     const PAGINAS = {
-        // ---------------- Evaluaciones (escritos, parciales, orales, etc.) ----------------
+        // ---------------- Evaluaciones (Calificaciones Libreta: orales, escritos, parciales, etc.) ----------------
         evaluacion: {
             clave: 'evaluacion',
             etiqueta: 'Evaluaciones (ingreso de notas)',
@@ -188,28 +200,36 @@
             detectar: () => !!$id('vCALIFCOD_0001'),
             contexto() {
                 const titulo = tituloPagina();
-                // Nombre de la evaluación: probamos ids conocidos y luego cualquier id que parezca una descripción de evaluación
-                let evaluacion = primerTexto(['vEVADSC', 'span_vEVADSC', 'vEVALDSC', 'span_vEVALDSC', 'vLIBEVADSC', 'span_vLIBEVADSC',
-                                              'vEVANOM', 'span_vEVANOM', 'vEVADESC', 'span_vEVADESC', 'vDESCRIPCION', 'span_vDESCRIPCION']);
-                if (!evaluacion) {
-                    const candidatos = document.querySelectorAll('[id*="EVA"][id*="DSC"], [id*="EVA"][id*="DESC"], [id*="EVA"][id*="NOM"]');
-                    for (const el of candidatos) {
-                        if (/_\d{4}$/.test(el.id)) continue;
-                        const t = textoDe(el);
-                        if (t) { evaluacion = t; break; }
-                    }
-                }
-                const libreta = limpiarLibreta(primerTexto(['vDESCLARGA', 'span_vDESCLARGA', 'vLIBDSC', 'span_vLIBDSC']), evaluacion) || titulo;
-                return { libreta, evaluacion: evaluacion || '', titulo };
+                // Título real: "Calificaciones (Orales, Escritos, O. Actividades) - CS FÍSICO-QUÍMICA - Grupo 7-EBI 3 - CS FÍSICO-QUÍMICA Doc. FERREIRA Martín."
+                let libreta = '';
+                const mGrupo = titulo.match(/Grupo\s+(.+?)\s+Doc\.?/i) || titulo.match(/Grupo\s+(.+)$/i);
+                if (mGrupo) libreta = mGrupo[1].trim();
+                if (!libreta) libreta = limpiarLibreta(primerTexto(['vDESCLARGA', 'span_vDESCLARGA', 'vLIBDSC', 'span_vLIBDSC'])) || titulo;
+
+                // Tipo de evaluación (Escritos, Parcial, Orales, ...), fecha y reunión a la que se asigna
+                const tipo = primerTexto(['vTDLIBID', 'vTDLIBID2', 'span_vTDLIBID']);
+                let fecha = textoDe($id('span_CTLLIBDFEC_0001'));
+                if (!/\d/.test(fecha)) fecha = textoDe($id('vLIBDFEC'));
+                if (!/\d/.test(fecha)) fecha = '';
+                const reunion = textoDe($id('span_vREUCODIMPGRID_0001')) || primerTexto(['vREUCODIMP', 'vREUCODIMP2']);
+                const evaluacion = [tipo, fecha].filter(Boolean).join(' ');
+                return { libreta, evaluacion, tipo, fecha, reunion, titulo };
             },
             leerFilas() {
                 return leerGrilla((idx, span) => {
                     const select = $id('vCALIFCOD_' + idx);
                     const textarea = $id('vLIBDCOMENTARIO_' + idx);
+                    const radios = Array.from(document.querySelectorAll('input[type="radio"][name="vRBSEMAFORO_' + idx + '"]'));
+                    const semaforoVisible = radios.length > 0 && radios.some(r => esVisible(r) || esVisible(r.closest('label')) || esVisible(r.closest('span')));
+                    const selectVisible = esVisible(select);
+                    const marcado = radios.find(r => r.checked);
+                    const usaSemaforo = semaforoVisible && !selectVisible;
                     return {
-                        select, textarea,
+                        select, textarea, radios, usaSemaforo,
+                        nro: textoDe($id('span_CTLINSGACTNROLISTA_' + idx)),
+                        reunion: textoDe($id('span_vREUCODIMPGRID_' + idx)),
                         tr: (select || span).closest('tr'),
-                        nota: textoDe(select),
+                        nota: usaSemaforo ? (marcado ? SEMAFORO[marcado.value] || marcado.value : '') : textoDe(select),
                         comentario: textarea ? textarea.value : ''
                     };
                 });
@@ -218,15 +238,27 @@
                 return ['N°', 'Estudiante', 'Nota', 'Comentario'];
             },
             filaExport(f, i) {
-                return [i + 1, f.nombre, f.nota, f.comentario];
+                return [f.nro || (i + 1), f.nombre, f.nota, f.comentario];
             },
             campos: { comentario: 'Comentario' },
+            resolver(fila, nota) {
+                if (fila.usaSemaforo) return resolverSemaforo(fila.radios, nota);
+                return resolverOpcion(fila.select, nota);
+            },
             aplicar(fila, entrada) {
                 const cambios = [];
                 const errores = [];
                 if (entrada.nota) {
-                    const r = escribirSelect(fila.select, entrada.nota);
-                    if (r.ok) cambios.push('nota ' + r.texto); else errores.push(r.motivo);
+                    if (fila.usaSemaforo) {
+                        const r = resolverSemaforo(fila.radios, entrada.nota);
+                        if (r.ok) {
+                            if (!r.radio.checked) r.radio.click();
+                            cambios.push('semáforo ' + r.texto);
+                        } else errores.push(r.motivo);
+                    } else {
+                        const r = escribirSelect(fila.select, entrada.nota);
+                        if (r.ok) cambios.push('nota ' + r.texto); else errores.push(r.motivo);
+                    }
                 }
                 if (entrada.comentario && fila.textarea) {
                     const r = escribirTexto(fila.textarea, entrada.comentario);
@@ -394,6 +426,7 @@
     //  Importación
     // =====================================================================
     async function cargarArchivo(file) {
+        refrescarPagina(); // releer la grilla por si SIGED cambió algo sin que lo notara el observador
         estado.resultado = null;
         estado.mensaje = { tipo: 'info', texto: 'Leyendo archivo…' };
         render();
@@ -441,6 +474,7 @@
     }
 
     function aplicarNotas() {
+        if (refrescarPagina()) { render(); return; } // la grilla cambió: mostrar la vista previa actualizada antes de cargar
         const pagina = estado.pagina;
         if (!pagina || !pagina.aplicar) return;
         const usados = new Map();
@@ -509,6 +543,7 @@
             ['Página de origen', pagina.etiqueta],
             ['Libreta', ctx.libreta || ''],
             ['Evaluación', ctx.evaluacion || ''],
+            ['Asignada a', ctx.reunion || ''],
             ['Alumnos', String(estado.filas.length)],
             ['Fecha de exportación', fechaTxt],
             ['', ''],
@@ -657,6 +692,7 @@
         const partes = [];
         if (ctx.libreta) partes.push(`<b>Libreta:</b> ${escapeHtml(ctx.libreta)}`);
         if (ctx.evaluacion) partes.push(`<b>Evaluación:</b> ${escapeHtml(ctx.evaluacion)}`);
+        if (ctx.reunion) partes.push(`<b>Asignada a:</b> ${escapeHtml(ctx.reunion)}`);
         partes.push(`<b>Alumnos:</b> ${estado.filas.length}`);
         return `<div class="donde">
                     <div class="etq">Dónde estás</div>
@@ -751,7 +787,7 @@
             let clase = entrada ? '' : 'sin';
             if (entrada) {
                 if (entrada.nota) {
-                    const r = resolverOpcion(fila.select, entrada.nota);
+                    const r = p.resolver ? p.resolver(fila, entrada.nota) : resolverOpcion(fila.select, entrada.nota);
                     if (r.ok) { notaHtml = `<td class="nota" title="${escapeHtml(entrada.nota)}">${escapeHtml(r.texto)}</td>`; listos++; }
                     else { notaHtml = `<td class="nota mal" title="${escapeHtml(r.motivo)}">⚠ ${escapeHtml(entrada.nota)}</td>`; clase = 'inv'; invalidas++; }
                 } else {

@@ -46,6 +46,7 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
   - Opcionales: `Fecha`, `Conducta`, y `Título de la tarea` / `Evaluación` para elegir qué columna cargar.
 - Formatos de versiones anteriores (`Equipos v1` y `Equipos v2`, con nota individual / por equipo).
 - Las notas con decimales se redondean (7,5 → 8) y se ajustan a la escala que permita la página (1 a 10, 1 a 12, etc.).
+- En evaluaciones de tipo Semáforo, la columna Nota acepta `Verde`, `Amarillo`, `Rojo` (o `V`, `A`, `R`).
 
 ## 🎯 Matching inteligente de nombres
 - Tolera tildes, mayúsculas, comas y errores de tipeo ("AREBALO" ↔ "AREVALO").
@@ -86,7 +87,7 @@ CargaNotasSIGED/
 ## 🔧 Cómo se detecta cada página
 La detección se hace por el contenido, no por la URL:
 - **Boletín:** existe el campo `vCALIFXREUCALIFCOD_0001` (nota) y `vCALIFXREUJUICIO_0001` (juicio).
-- **Evaluaciones:** existe el campo `vCALIFCOD_0001` (nota) y, si hay, `vLIBDCOMENTARIO_0001` (comentario).
+- **Evaluaciones (Calificaciones Libreta):** existe el campo `vCALIFCOD_0001` (nota) y `vLIBDCOMENTARIO_0001` (comentario). El panel muestra el tipo de evaluación (Escritos, Parcial, Orales…), su fecha y la reunión a la que está asignada. Si la evaluación es de tipo **Semáforo**, acepta Verde / Amarillo / Rojo en la columna Nota.
 - **Libro del Profesor:** existe el selector de libreta `vLIBIDSELEC` y las tarjetas de alumnos.
 - Los nombres de los alumnos se leen de `span_vFALUNOMCOM_XXXX`. Si SIGED recarga la grilla (por ejemplo al cambiar de libreta), el panel se actualiza solo.
 
