@@ -486,6 +486,8 @@
         render();
         try {
             const datos = await F.leerArchivo(file);
+            const input = raiz.getElementById('archivo');
+            if (input) input.value = ''; // permite volver a elegir el mismo archivo
             estado.archivo = datos;
             estado.actividad = datos.actividades.length === 1 ? datos.actividades[0] : '';
             estado.tipo = 'individual';
@@ -558,6 +560,11 @@
 
         estado.resultado = resultado;
         estado.mensaje = null;
+        // Las notas guardadas en el asistente se consumen al cargarlas: no vuelven a ofrecerse
+        if (estado.archivo && estado.archivo.guardadas && resultado.aplicados > 0) {
+            try { localStorage.removeItem(CLAVE_GUARDADAS); } catch (e) { /* ignorar */ }
+            estado.mensaje = { tipo: 'info', texto: 'Las notas guardadas ya se cargaron acá y se quitaron del asistente.' };
+        }
         console.log('📊 Resultado de la carga:', resultado);
         render();
     }
