@@ -18,10 +18,11 @@
 
     const M = window.SigedMatching;
     const F = window.SigedFormatos;
+    const D = window.SigedDetalle;
     const UMBRAL_MATCH = 0.70;
     const MAX_FILAS = 2000;
 
-    console.log('✅ SIGED - Carga de Notas: content script cargado en', location.href);
+    console.log('✅ Asistente de SIGED: content script cargado en', location.href);
 
     // =====================================================================
     //  Utilidades DOM
@@ -376,13 +377,64 @@
             },
             campos: { comentario: 'Comentario' },
             aplicar: null // en esta página no se cargan notas
+        },
+
+        // ---------------- Orales, Escritos y O. Actividades (detalle por alumno) ----------------
+        detalle: {
+            clave: 'detalle',
+            etiqueta: 'Orales, Escritos y O. Actividades',
+            icono: '📊',
+            detectar: () => !!D && D.detectar(),
+            contexto() {
+                const titulo = tituloPagina();
+                const alumnos = estado.filas || [];
+                const curso = alumnos.length ? alumnos[0].curso : '';
+                return { libreta: curso, evaluacion: '', titulo, totalLibreta: D.totalAlumnosLibreta() };
+            },
+            leerFilas() {
+                return D.leerAlumnos().map(a => Object.assign(a, { tok: M.tokens(a.nombre) }));
+            },
+            columnasExport() { return []; },
+            filaExport() { return []; },
+            campos: { comentario: 'Comentario' },
+            aplicar: null
+        },
+
+        // ---------------- Cierre de promedios por alumno (un alumno por vez, juicios por reunión) ----------------
+        cierre: {
+            clave: 'cierre',
+            etiqueta: 'Cierre de promedios por alumno',
+            icono: '🗂️',
+            detectar: () => !!D && D.detectarCierre(),
+            contexto() {
+                const enlaces = D.enlacesAlumnos();
+                const alumno = estado.filas[0];
+                return {
+                    libreta: D.libretaCierre() || (alumno ? alumno.curso : ''),
+                    evaluacion: '',
+                    titulo: tituloPagina(),
+                    totalLibreta: enlaces.length,
+                    nroActual: alumno ? alumno.nro : ''
+                };
+            },
+            leerFilas() {
+                const a = D.leerAlumnoCierre();
+                return a.nombre ? [Object.assign(a, { tok: M.tokens(a.nombre) })] : [];
+            },
+            columnasExport() { return []; },
+            filaExport() { return []; },
+            campos: { comentario: 'Juicio' },
+            aplicar: null
         }
     };
 
     function detectarPagina() {
+        // El cierre por alumno comparte campos con el boletín: se prueba primero
+        if (PAGINAS.cierre.detectar()) return PAGINAS.cierre;
         if (PAGINAS.boletin.detectar()) return PAGINAS.boletin;
         if (PAGINAS.evaluacion.detectar()) return PAGINAS.evaluacion;
         if (PAGINAS.libro.detectar()) return PAGINAS.libro;
+        if (PAGINAS.detalle.detectar()) return PAGINAS.detalle;
         return null;
     }
 
@@ -400,6 +452,7 @@
         asignacion: [],       // por fila de SIGED: índice de entrada o -1
         mensaje: null,        // {tipo: 'ok'|'error'|'aviso'|'info', texto}
         resultado: null,      // resumen tras aplicar
+        alumnoSel: '',        // página de detalle: idx del alumno a exportar ('' = todos los visibles)
         colapsado: false
     };
 
@@ -409,9 +462,9 @@
         const pagina = detectarPagina();
         const cambioPagina = (pagina && pagina.clave) !== (estado.pagina && estado.pagina.clave);
         estado.pagina = pagina;
-        estado.contexto = pagina ? pagina.contexto() : { libreta: '', evaluacion: '', titulo: tituloPagina() };
         const firmaAntes = estado.firmaFilas || '';
         estado.filas = pagina ? pagina.leerFilas() : [];
+        estado.contexto = pagina ? pagina.contexto() : { libreta: '', evaluacion: '', titulo: tituloPagina() };
         estado.firmaFilas = estado.filas.map(f => f.nombre).join('|');
         const cambiaronAlumnos = firmaAntes !== estado.firmaFilas;
         if (cambioPagina || cambiaronAlumnos) {
@@ -539,7 +592,7 @@
         const hoy = new Date();
         const fechaTxt = hoy.toLocaleDateString('es-UY');
         const info = [
-            ['Planilla generada por', 'SIGED - Carga de Notas (extensión del navegador)'],
+            ['Planilla generada por', 'Asistente de SIGED (extensión del navegador)'],
             ['Página de origen', pagina.etiqueta],
             ['Libreta', ctx.libreta || ''],
             ['Evaluación', ctx.evaluacion || ''],
@@ -575,18 +628,211 @@
         render();
     }
 
+    /** Exporta el detalle por alumno (página "Orales, Escritos y O. Actividades") a un Excel con varias hojas */
+    function exportarDetalle() {
+        refrescarPagina();
+        let alumnos = estado.filas;
+        if (estado.alumnoSel) alumnos = alumnos.filter(a => a.idx === estado.alumnoSel);
+        if (alumnos.length === 0) {
+            estado.mensaje = { tipo: 'aviso', texto: 'No hay alumnos visibles para exportar.' };
+            render();
+            return;
+        }
+        const ctx = estado.contexto;
+        const hoy = new Date();
+        const sinDetalle = alumnos.filter(a => !a.detalleCargado).length;
+        const { hojas } = D.construirHojas(alumnos);
+        const info = [
+            ['Planilla generada por', 'Asistente de SIGED (extensión del navegador)'],
+            ['Página de origen', PAGINAS.detalle.etiqueta],
+            ['Curso / Grupo / Asignatura', ctx.libreta || ''],
+            ['Alumnos exportados', String(alumnos.length) + (ctx.totalLibreta ? ' de ' + ctx.totalLibreta + ' de la libreta' : '')],
+            ['Fecha de exportación', hoy.toLocaleDateString('es-UY')],
+            ['', ''],
+            ['Hoja Notas', 'Una fila por evaluación: período en que SIGED la contabiliza, fecha, tipo, nota, comentario y quién la registró.'],
+            ['Hoja Promedios', 'Una fila por alumno y período: notas por tipo (Orales, Escritas, O. Act), Rendimiento (R) e inasistencias (J, NJ, fictas).'],
+            ['Hoja Resumen', 'Una fila por alumno: datos, calificaciones de evaluaciones semestrales y rendimiento de cada período.'],
+            ['Juicios', 'Esta página de SIGED no muestra los juicios de las reuniones. Para exportarlos, entrá a "Pasaje de calificaciones boletín por libreta", elegí la reunión y usá "Descargar notas de esta página".']
+        ];
+        if (sinDetalle) info.push(['Atención', `${sinDetalle} alumno(s) no tenían el detalle cargado en SIGED (usá "Mostrar detalle (todos)" antes de exportar).`]);
+        const nombreBase = ['Detalle', alumnos.length === 1 ? alumnos[0].nombre : ctx.libreta, hoy.toISOString().slice(0, 10)];
+        try {
+            const nombre = F.descargarLibro({ hojas, info, nombreBase });
+            estado.mensaje = { tipo: 'ok', texto: `Archivo descargado: ${nombre}` + (sinDetalle ? ` (${sinDetalle} alumno(s) sin detalle cargado)` : '') };
+        } catch (err) {
+            console.error('❌ Error exportando detalle:', err);
+            estado.mensaje = { tipo: 'error', texto: 'No se pudo generar el archivo: ' + err.message };
+        }
+        render();
+    }
+
+    // =====================================================================
+    //  Recorrido automático de "Cierre de promedios por alumno"
+    //  La página muestra un alumno por vez y cada cambio de alumno recarga la
+    //  página, así que el avance se guarda en sessionStorage (vive en la pestaña).
+    // =====================================================================
+    const CLAVE_RECORRIDO = 'sigedCargaNotas.recorridoCierre';
+    const RECORRIDO_MAX_MIN = 60;
+
+    function leerRecorrido() {
+        try {
+            const r = JSON.parse(sessionStorage.getItem(CLAVE_RECORRIDO) || 'null');
+            if (!r) return null;
+            if (Date.now() - (r.inicio || 0) > RECORRIDO_MAX_MIN * 60 * 1000) { sessionStorage.removeItem(CLAVE_RECORRIDO); return null; }
+            return r;
+        } catch (e) { return null; }
+    }
+
+    function guardarRecorrido(r) {
+        try {
+            if (r) sessionStorage.setItem(CLAVE_RECORRIDO, JSON.stringify(r));
+            else sessionStorage.removeItem(CLAVE_RECORRIDO);
+        } catch (e) {
+            console.error('No se pudo guardar el avance del recorrido', e);
+        }
+    }
+
+    function iniciarRecorrido() {
+        refrescarPagina();
+        const enlaces = D.enlacesAlumnos();
+        if (enlaces.length === 0) {
+            estado.mensaje = { tipo: 'aviso', texto: 'No encontré la lista de alumnos (números 1, 2, 3…) en la página.' };
+            render();
+            return;
+        }
+        const recorrido = {
+            inicio: Date.now(),
+            libreta: estado.contexto.libreta || '',
+            total: enlaces.length,
+            pendientes: enlaces.filter(e => !e.actual && e.href).map(e => ({ nro: e.nro, href: e.href })),
+            hechos: [],
+            errores: [],
+            estado: 'activo'
+        };
+        guardarRecorrido(recorrido);
+        continuarRecorrido();
+    }
+
+    /** Se llama al cargar cada página: toma el alumno visible y pasa al siguiente */
+    function continuarRecorrido() {
+        const recorrido = leerRecorrido();
+        if (!recorrido || recorrido.estado !== 'activo') return false;
+        if (!estado.pagina || estado.pagina.clave !== 'cierre' || estado.filas.length === 0) {
+            recorrido.estado = 'error';
+            recorrido.errores.push('La página que se abrió no es "Cierre de promedios por alumno". Se detuvo el recorrido.');
+            guardarRecorrido(recorrido);
+            render();
+            return true;
+        }
+        const alumno = estado.filas[0];
+        if (!recorrido.hechos.some(h => h.nro === alumno.nro && h.nombre === alumno.nombre)) {
+            recorrido.hechos.push(alumno);
+        }
+        recorrido.pendientes = recorrido.pendientes.filter(p => p.nro !== alumno.nro);
+        if (recorrido.pendientes.length === 0) {
+            recorrido.estado = 'listo';
+            guardarRecorrido(recorrido);
+            terminarRecorrido(recorrido);
+            return true;
+        }
+        guardarRecorrido(recorrido);
+        render();
+        const siguiente = recorrido.pendientes[0];
+        setTimeout(() => { window.location.href = siguiente.href; }, 400);
+        return true;
+    }
+
+    function terminarRecorrido(recorrido) {
+        const alumnos = recorrido.hechos.slice().sort((a, b) => (parseInt(a.nro, 10) || 0) - (parseInt(b.nro, 10) || 0));
+        const nombre = descargarExcelCierre(alumnos, recorrido.libreta, recorrido.errores);
+        guardarRecorrido(null);
+        estado.mensaje = nombre
+            ? { tipo: 'ok', texto: `✅ Recorrido terminado: ${alumnos.length} de ${recorrido.total} alumnos exportados. Archivo: ${nombre}` }
+            : { tipo: 'error', texto: 'El recorrido terminó pero no se pudo generar el archivo.' };
+        estado.ultimoRecorrido = { alumnos: alumnos.length, total: recorrido.total };
+        setColapsado(false);
+        render();
+    }
+
+    function detenerRecorrido(descargar) {
+        const recorrido = leerRecorrido();
+        guardarRecorrido(null);
+        if (recorrido && descargar && recorrido.hechos.length) {
+            const alumnos = recorrido.hechos.slice().sort((a, b) => (parseInt(a.nro, 10) || 0) - (parseInt(b.nro, 10) || 0));
+            const nombre = descargarExcelCierre(alumnos, recorrido.libreta, ['Recorrido detenido antes de terminar: faltan ' + recorrido.pendientes.length + ' alumno(s).']);
+            estado.mensaje = { tipo: 'aviso', texto: `Recorrido detenido. Se exportaron ${alumnos.length} alumno(s) en ${nombre}.` };
+        } else {
+            estado.mensaje = { tipo: 'info', texto: 'Recorrido cancelado.' };
+        }
+        render();
+    }
+
+    function descargarExcelCierre(alumnos, libreta, avisos) {
+        const hoy = new Date();
+        const { hojas } = D.construirHojas(alumnos);
+        const info = [
+            ['Planilla generada por', 'Asistente de SIGED (extensión del navegador)'],
+            ['Página de origen', PAGINAS.cierre.etiqueta],
+            ['Libreta', libreta || ''],
+            ['Alumnos exportados', String(alumnos.length)],
+            ['Fecha de exportación', hoy.toLocaleDateString('es-UY')],
+            ['', ''],
+            ['Hoja Juicios', 'Un alumno por fila: para cada reunión, el rendimiento y el juicio de asignatura (y el juicio de reunión si existe).'],
+            ['Hoja Juicios (lista)', 'Una fila por alumno y reunión con rendimiento, calidad, fecha y juicios.'],
+            ['Hoja Notas', 'Una fila por evaluación: período, fecha, tipo, nota, comentario y quién la registró.'],
+            ['Hoja Promedios', 'Una fila por alumno y período: notas por tipo, Rendimiento (R) e inasistencias.'],
+            ['Hoja Resumen', 'Una fila por alumno: datos, semestrales y rendimiento por período.']
+        ];
+        (avisos || []).forEach(a => info.push(['Atención', a]));
+        try {
+            return F.descargarLibro({
+                hojas, info,
+                nombreBase: ['Juicios', alumnos.length === 1 ? alumnos[0].nombre : libreta, hoy.toISOString().slice(0, 10)]
+            });
+        } catch (err) {
+            console.error('❌ Error exportando cierre:', err);
+            estado.mensaje = { tipo: 'error', texto: 'No se pudo generar el archivo: ' + err.message };
+            return '';
+        }
+    }
+
+    function exportarCierreActual() {
+        refrescarPagina();
+        if (estado.filas.length === 0) {
+            estado.mensaje = { tipo: 'aviso', texto: 'No hay un alumno visible en la página.' };
+            render();
+            return;
+        }
+        const nombre = descargarExcelCierre(estado.filas, estado.contexto.libreta, []);
+        if (nombre) estado.mensaje = { tipo: 'ok', texto: `Archivo descargado: ${nombre}` };
+        render();
+    }
+
+    /** Hace clic en un control de SIGED (botón TODOS, Mostrar detalle) en nombre del docente */
+    function clicSiged(el, descripcion) {
+        if (!el) {
+            estado.mensaje = { tipo: 'aviso', texto: `No encontré el control "${descripcion}" en la página.` };
+            render();
+            return;
+        }
+        el.click();
+        estado.mensaje = { tipo: 'info', texto: `Pedí a SIGED "${descripcion}". Esperá a que la página termine de cargar.` };
+        render();
+    }
+
     // =====================================================================
     //  Panel flotante (Shadow DOM para no mezclar estilos con SIGED)
     // =====================================================================
     const host = document.createElement('div');
     host.id = 'siged-carga-notas-host';
-    // Abajo a la izquierda para no tapar otros paneles que SIGED o el docente tengan a la derecha.
-    host.style.cssText = 'all: initial; position: fixed; z-index: 2147483000; left: 16px; bottom: 16px;';
+    // Abajo a la derecha. Si el docente lo arrastra, se recuerda la posición.
+    host.style.cssText = 'all: initial; position: fixed; z-index: 2147483000; right: 16px; bottom: 16px;';
     try {
         const pos = JSON.parse(localStorage.getItem('sigedCargaNotas.posicion') || 'null');
         if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
             host.style.left = Math.min(pos.left, Math.max(0, window.innerWidth - 80)) + 'px';
             host.style.top = Math.min(pos.top, Math.max(0, window.innerHeight - 40)) + 'px';
+            host.style.right = 'auto';
             host.style.bottom = 'auto';
         }
     } catch (e) { /* ignorar */ }
@@ -663,15 +909,15 @@
         const cont = raiz.getElementById('contenedor');
         if (estado.colapsado) {
             const activo = !!estado.pagina;
-            cont.innerHTML = `<button class="pill" data-act="expandir" title="Abrir el panel de carga de notas">
-                                <span class="punto ${activo ? 'on' : ''}"></span> 📚 Carga de Notas
+            cont.innerHTML = `<button class="pill" data-act="expandir" title="Abrir el Asistente de SIGED">
+                                <span class="punto ${activo ? 'on' : ''}"></span> 🎓 Asistente de SIGED
                               </button>`;
             return;
         }
         cont.innerHTML = `
             <div class="panel">
                 <div class="cabecera" id="cabecera">
-                    <span class="titulo">📚 Carga de Notas SIGED</span>
+                    <span class="titulo">🎓 Asistente de SIGED</span>
                     <button data-act="colapsar" title="Minimizar">–</button>
                 </div>
                 <div class="cuerpo">${renderCuerpo()}</div>
@@ -690,10 +936,14 @@
                     </div>`;
         }
         const partes = [];
-        if (ctx.libreta) partes.push(`<b>Libreta:</b> ${escapeHtml(ctx.libreta)}`);
+        if (ctx.libreta) partes.push(`<b>${p.clave === 'detalle' ? 'Curso/Gr/Asig' : 'Libreta'}:</b> ${escapeHtml(ctx.libreta)}`);
         if (ctx.evaluacion) partes.push(`<b>Evaluación:</b> ${escapeHtml(ctx.evaluacion)}`);
         if (ctx.reunion) partes.push(`<b>Asignada a:</b> ${escapeHtml(ctx.reunion)}`);
-        partes.push(`<b>Alumnos:</b> ${estado.filas.length}`);
+        if (p.clave === 'cierre') {
+            partes.push(`<b>Alumno:</b> ${estado.filas[0] ? escapeHtml('N° ' + estado.filas[0].nro + ' · ' + estado.filas[0].nombre) : '—'}${ctx.totalLibreta ? ' (de ' + ctx.totalLibreta + ')' : ''}`);
+        } else {
+            partes.push(`<b>Alumnos${p.clave === 'detalle' ? ' visibles' : ''}:</b> ${estado.filas.length}${p.clave === 'detalle' && ctx.totalLibreta ? ' de ' + ctx.totalLibreta : ''}`);
+        }
         return `<div class="donde">
                     <div class="etq">Dónde estás</div>
                     <div class="pag">${p.icono} ${escapeHtml(p.etiqueta)}</div>
@@ -712,6 +962,8 @@
         if (!p) return html + renderMensaje();
 
         const xlsx = F.tieneXLSX();
+        if (p.clave === 'detalle') return html + renderDetalle();
+        if (p.clave === 'cierre') return html + renderCierre();
         if (p.clave === 'libro') {
             if (estado.filas.length === 0) {
                 html += `<div class="msg msg-aviso">Seleccioná una libreta para ver los alumnos del grupo.</div>`;
@@ -738,6 +990,75 @@
         html += renderMensaje();
         if (estado.archivo) html += renderArchivo();
         return html;
+    }
+
+    function renderDetalle() {
+        const alumnos = estado.filas;
+        const ctx = estado.contexto;
+        const total = ctx.totalLibreta || 0;
+        const sinDetalle = alumnos.filter(a => !a.detalleCargado).length;
+        const b = D.botones();
+        let html = '';
+        if (alumnos.length === 0) {
+            return `<div class="msg msg-aviso">No hay alumnos en la página. Elegí un alumno o hacé clic en TODOS en SIGED.</div>`;
+        }
+        if (total && alumnos.length < total) {
+            html += `<div class="msg msg-info">Se ven <b>${alumnos.length} de ${total}</b> alumnos de la libreta. Para exportar a todos, mostralos primero en SIGED.</div>`;
+            if (b.todos) html += `<button class="btn btn-gris" data-act="siged-todos"><span class="ic">👥</span><span>Mostrar TODOS los alumnos en SIGED<small>Equivale al botón TODOS de la página</small></span></button>`;
+        }
+        if (sinDetalle) {
+            html += `<div class="msg msg-aviso">${sinDetalle} alumno(s) no tienen el detalle de evaluaciones cargado.</div>`;
+            if (b.mostrarDetalleTodos) html += `<button class="btn btn-gris" data-act="siged-detalle"><span class="ic">🔎</span><span>Mostrar detalle de todos en SIGED<small>Equivale a "Mostrar / Ocultar detalle (todos)"</small></span></button>`;
+        }
+        if (alumnos.length > 1) {
+            html += `<div class="caja"><label>¿Qué exportar?</label>
+                <select data-act="alumno">
+                    <option value="">Todos los alumnos visibles (${alumnos.length})</option>
+                    ${alumnos.map(a => `<option value="${a.idx}" ${a.idx === estado.alumnoSel ? 'selected' : ''}>${escapeHtml(a.nro ? a.nro + ' - ' : '')}${escapeHtml(a.nombre)}</option>`).join('')}
+                </select></div>`;
+        }
+        const sel = estado.alumnoSel ? alumnos.find(a => a.idx === estado.alumnoSel) : null;
+        const cantEval = (sel ? [sel] : alumnos).reduce((n, a) => n + a.evaluaciones.length, 0);
+        html += `<button class="btn btn-azul" data-act="exportar-detalle"><span class="ic">📥</span><span>Descargar Excel ${sel ? 'de ' + escapeHtml(sel.apellido) : 'de ' + alumnos.length + ' alumno(s)'}
+                 <small>${cantEval} evaluaciones con comentarios · promedios por período · resumen</small></span></button>`;
+        html += `<div class="ayuda">El Excel tiene tres hojas: <b>Notas</b> (cada evaluación con fecha, tipo, nota, comentario y período), <b>Promedios</b> (notas por tipo, rendimiento e inasistencias de cada período) y <b>Resumen</b> (datos, semestrales y rendimiento por período).<br>
+                 Los juicios de las reuniones no están en esta página: exportalos desde <b>Pasaje de calificaciones boletín</b>.</div>`;
+        return html + renderMensaje();
+    }
+
+    function renderCierre() {
+        const recorrido = leerRecorrido();
+        const ctx = estado.contexto;
+        const alumno = estado.filas[0];
+        let html = '';
+        if (recorrido && recorrido.estado === 'activo') {
+            const hechos = recorrido.hechos.length;
+            const pct = recorrido.total ? Math.round(hechos / recorrido.total * 100) : 0;
+            html += `<div class="caja">
+                <div class="tit">Recorriendo alumnos… no toques la página</div>
+                <div class="contador">${hechos} de ${recorrido.total} alumnos leídos (${pct}%)</div>
+                <div style="height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:#27ae60"></div></div>
+                <div class="ayuda">Ahora: ${escapeHtml(alumno ? 'N° ' + alumno.nro + ' ' + alumno.nombre : '')}. Al terminar, el Excel se descarga solo y te aviso acá.</div>
+                <button class="btn btn-rojo" data-act="recorrido-detener"><span class="ic">⏹</span><span>Detener y descargar lo leído</span></button>
+                <button class="link" data-act="recorrido-cancelar">Cancelar sin descargar</button>
+            </div>`;
+            return html + renderMensaje();
+        }
+        if (recorrido && recorrido.estado === 'error') {
+            html += `<div class="msg msg-error">${escapeHtml(recorrido.errores.join(' '))} Se leyeron ${recorrido.hechos.length} alumno(s).</div>
+                     <button class="btn btn-gris" data-act="recorrido-detener"><span class="ic">📥</span><span>Descargar lo que se leyó</span></button>
+                     <button class="link" data-act="recorrido-cancelar">Descartar</button>`;
+        }
+        if (!alumno) return html + `<div class="msg msg-aviso">No hay un alumno visible. Elegí una libreta y un alumno en SIGED.</div>` + renderMensaje();
+
+        const reunionesConJuicio = (alumno.reuniones || []).filter(r => r.juicio || r.rendimiento).length;
+        html += `<button class="btn btn-verde" data-act="recorrido-iniciar"><span class="ic">🔄</span><span>Recorrer los ${ctx.totalLibreta || ''} alumnos y exportar todo (Excel)
+                 <small>Pasa alumno por alumno solo. Al terminar avisa y descarga el archivo.</small></span></button>`;
+        html += `<button class="btn btn-azul" data-act="exportar-cierre"><span class="ic">📥</span><span>Descargar Excel de ${escapeHtml(alumno.apellido || 'este alumno')}
+                 <small>${reunionesConJuicio} reunión(es) con nota o juicio · ${alumno.evaluaciones.length} evaluaciones</small></span></button>`;
+        html += `<div class="ayuda">El Excel trae todos los alumnos en una misma hoja <b>Juicios</b> (una fila por alumno, con el rendimiento y el juicio de cada reunión), más <b>Juicios (lista)</b>, <b>Notas</b>, <b>Promedios</b> y <b>Resumen</b>.<br>
+                 Durante el recorrido la página cambia de alumno sola: no la cierres ni la uses hasta que avise que terminó.</div>`;
+        return html + renderMensaje();
     }
 
     function renderArchivo() {
@@ -852,6 +1173,13 @@
             case 'quitar': quitarArchivo(); break;
             case 'aplicar': aplicarNotas(); break;
             case 'guardar': irAGuardar(); break;
+            case 'exportar-detalle': exportarDetalle(); break;
+            case 'exportar-cierre': exportarCierreActual(); break;
+            case 'recorrido-iniciar': iniciarRecorrido(); break;
+            case 'recorrido-detener': detenerRecorrido(true); break;
+            case 'recorrido-cancelar': detenerRecorrido(false); break;
+            case 'siged-todos': clicSiged(D.botones().todos, 'mostrar TODOS los alumnos'); break;
+            case 'siged-detalle': clicSiged(D.botones().mostrarDetalleTodos, 'mostrar el detalle de todos'); break;
         }
     });
 
@@ -872,6 +1200,10 @@
             estado.tipo = el.value;
             estado.resultado = null;
             recalcularAsignacion();
+            render();
+        } else if (act === 'alumno') {
+            estado.alumnoSel = el.value;
+            estado.mensaje = null;
             render();
         } else if (act === 'asignar') {
             const fi = parseInt(el.dataset.fila, 10);
@@ -935,6 +1267,10 @@
     function iniciar() {
         montar();
         observador.observe(document.body, { childList: true, subtree: true });
+        if (leerRecorrido()) {
+            setColapsado(false);
+            continuarRecorrido();
+        }
     }
 
     if (document.readyState === 'loading') {
@@ -973,7 +1309,9 @@
                 case 'exportar':
                     montar();
                     setColapsado(false);
-                    exportar(req.formato);
+                    if (estado.pagina && estado.pagina.clave === 'detalle') exportarDetalle();
+                    else if (estado.pagina && estado.pagina.clave === 'cierre') exportarCierreActual();
+                    else exportar(req.formato);
                     sendResponse({ ok: true });
                     break;
                 case 'importar':
@@ -991,6 +1329,6 @@
             return false;
         });
     } catch (e) {
-        console.warn('SIGED - Carga de Notas: no se pudo registrar el canal con el popup', e);
+        console.warn('Asistente de SIGED: no se pudo registrar el canal con el popup', e);
     }
 })();

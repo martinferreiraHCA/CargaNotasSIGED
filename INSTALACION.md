@@ -1,4 +1,4 @@
-# 🚀 Guía de Instalación - SIGED Carga de Notas
+# 🚀 Guía de Instalación - Asistente de SIGED
 
 ## Opción 1: Instalación Local (Modo Desarrollador)
 
@@ -7,7 +7,7 @@
 2. Asegúrate de tener todos los archivos y carpetas:
    - `manifest.json`
    - `content.js`
-   - `shared/matching.js` y `shared/formatos.js`
+   - `shared/matching.js`, `shared/formatos.js` y `shared/detalle.js`
    - `lib/xlsx.full.min.js`
    - `popup.js` y `popup.html`
    - `icon16.png`, `icon48.png`, `icon128.png`
@@ -36,16 +36,18 @@
 ### Paso 3: Fijar la Extensión (Recomendado)
 
 1. Busca el ícono de puzzle 🧩 en la barra de herramientas (junto a la barra de direcciones)
-2. Encuentra "SIGED - Carga de Notas"
+2. Encuentra "Asistente de SIGED"
 3. Haz clic en el ícono de pin 📌 para fijarla a la barra
 
 ### Paso 4: Usar la Extensión
 
 1. Entra a SIGED y recarga la página (F5) si ya la tenías abierta.
-2. Abajo a la izquierda aparece el panel **📚 Carga de Notas** (si está minimizado, haz clic en el botón).
+2. Abajo a la derecha aparece el panel **🎓 Asistente de SIGED** (si está minimizado, haz clic en el botón).
 3. El panel reconoce solo la página:
    - **Libro del Profesor:** botón para descargar la plantilla del grupo.
    - **Evaluaciones** y **Pasaje de calificaciones boletín:** botones para exportar e importar notas.
+   - **Orales, Escritos y O. Actividades:** botón para descargar el Excel con notas, comentarios y promedios por período.
+   - **Cierre de promedios por alumno:** botón para recorrer todos los alumnos y descargar el Excel con los juicios de todas las reuniones.
 4. Al importar, revisa la vista previa, haz clic en **Cargar notas en la página** y luego en **Guardar** en SIGED.
 
 También puedes hacer clic en el ícono de la extensión: muestra dónde estás y abre el panel.
@@ -195,7 +197,7 @@ Para instituciones educativas con Google Workspace:
 - Revisa que los elementos HTML tengan los IDs correctos
 
 ### No aparece el panel
-- Puede estar minimizado: busca el botón "📚 Carga de Notas" abajo a la izquierda
+- Puede estar minimizado: busca el botón "🎓 Asistente de SIGED" abajo a la derecha
 - Si lo arrastraste fuera de la pantalla, abre el ícono de la extensión y usa "Mostrar el panel en la página"
 
 ### El archivo Excel no se lee
