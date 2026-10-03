@@ -22,7 +22,7 @@
     const UMBRAL_MATCH = 0.70;
     const MAX_FILAS = 2000;
 
-    console.log('✅ SIGED - Carga de Notas: content script cargado en', location.href);
+    console.log('✅ Asistente de SIGED: content script cargado en', location.href);
 
     // =====================================================================
     //  Utilidades DOM
@@ -592,7 +592,7 @@
         const hoy = new Date();
         const fechaTxt = hoy.toLocaleDateString('es-UY');
         const info = [
-            ['Planilla generada por', 'SIGED - Carga de Notas (extensión del navegador)'],
+            ['Planilla generada por', 'Asistente de SIGED (extensión del navegador)'],
             ['Página de origen', pagina.etiqueta],
             ['Libreta', ctx.libreta || ''],
             ['Evaluación', ctx.evaluacion || ''],
@@ -643,7 +643,7 @@
         const sinDetalle = alumnos.filter(a => !a.detalleCargado).length;
         const { hojas } = D.construirHojas(alumnos);
         const info = [
-            ['Planilla generada por', 'SIGED - Carga de Notas (extensión del navegador)'],
+            ['Planilla generada por', 'Asistente de SIGED (extensión del navegador)'],
             ['Página de origen', PAGINAS.detalle.etiqueta],
             ['Curso / Grupo / Asignatura', ctx.libreta || ''],
             ['Alumnos exportados', String(alumnos.length) + (ctx.totalLibreta ? ' de ' + ctx.totalLibreta + ' de la libreta' : '')],
@@ -771,7 +771,7 @@
         const hoy = new Date();
         const { hojas } = D.construirHojas(alumnos);
         const info = [
-            ['Planilla generada por', 'SIGED - Carga de Notas (extensión del navegador)'],
+            ['Planilla generada por', 'Asistente de SIGED (extensión del navegador)'],
             ['Página de origen', PAGINAS.cierre.etiqueta],
             ['Libreta', libreta || ''],
             ['Alumnos exportados', String(alumnos.length)],
@@ -825,13 +825,14 @@
     // =====================================================================
     const host = document.createElement('div');
     host.id = 'siged-carga-notas-host';
-    // Abajo a la izquierda para no tapar otros paneles que SIGED o el docente tengan a la derecha.
-    host.style.cssText = 'all: initial; position: fixed; z-index: 2147483000; left: 16px; bottom: 16px;';
+    // Abajo a la derecha. Si el docente lo arrastra, se recuerda la posición.
+    host.style.cssText = 'all: initial; position: fixed; z-index: 2147483000; right: 16px; bottom: 16px;';
     try {
         const pos = JSON.parse(localStorage.getItem('sigedCargaNotas.posicion') || 'null');
         if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
             host.style.left = Math.min(pos.left, Math.max(0, window.innerWidth - 80)) + 'px';
             host.style.top = Math.min(pos.top, Math.max(0, window.innerHeight - 40)) + 'px';
+            host.style.right = 'auto';
             host.style.bottom = 'auto';
         }
     } catch (e) { /* ignorar */ }
@@ -908,15 +909,15 @@
         const cont = raiz.getElementById('contenedor');
         if (estado.colapsado) {
             const activo = !!estado.pagina;
-            cont.innerHTML = `<button class="pill" data-act="expandir" title="Abrir el panel de carga de notas">
-                                <span class="punto ${activo ? 'on' : ''}"></span> 📚 Carga de Notas
+            cont.innerHTML = `<button class="pill" data-act="expandir" title="Abrir el Asistente de SIGED">
+                                <span class="punto ${activo ? 'on' : ''}"></span> 🎓 Asistente de SIGED
                               </button>`;
             return;
         }
         cont.innerHTML = `
             <div class="panel">
                 <div class="cabecera" id="cabecera">
-                    <span class="titulo">📚 Carga de Notas SIGED</span>
+                    <span class="titulo">🎓 Asistente de SIGED</span>
                     <button data-act="colapsar" title="Minimizar">–</button>
                 </div>
                 <div class="cuerpo">${renderCuerpo()}</div>
@@ -1328,6 +1329,6 @@
             return false;
         });
     } catch (e) {
-        console.warn('SIGED - Carga de Notas: no se pudo registrar el canal con el popup', e);
+        console.warn('Asistente de SIGED: no se pudo registrar el canal con el popup', e);
     }
 })();

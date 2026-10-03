@@ -1,10 +1,10 @@
-# 📚 SIGED - Carga de Notas
+# 🎓 Asistente de SIGED
 
 Extensión de Chrome/Edge para **importar y exportar notas en SIGED sin pasarlas una por una**.
 Muestra un panel dentro de la propia página de SIGED que **detecta solo en qué pantalla estás** y
 ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se hace con dos o tres clics.
 
-![Version](https://img.shields.io/badge/version-3.2-blue)
+![Version](https://img.shields.io/badge/version-3.3-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-Compatible-brightgreen)
 ![Edge](https://img.shields.io/badge/Edge-Compatible-brightgreen)
 
@@ -17,7 +17,7 @@ ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se h
 | **Pasaje de calificaciones boletín por libreta** (semestrales, reuniones) | 📥 Exportar notas y juicios · 📤 Importar notas y juicios desde un archivo. |
 | **Orales, Escritos y O. Actividades** (detalle por alumno) | 📥 Descargar un Excel con **todas las notas y comentarios**, los **promedios por período** (notas por tipo, rendimiento e inasistencias) y un resumen por alumno. De un alumno o de todos los visibles. |
 | **Cierre de promedios por alumno** | 🔄 **Recorre solo todos los alumnos** de la libreta (la página cambia de alumno sola) y al terminar avisa y descarga un Excel con los **juicios y rendimientos de todas las reuniones**, todos los alumnos en una misma hoja. También exporta el alumno visible. |
-| Cualquier otra página | El panel queda minimizado (botón "📚 Carga de Notas") y avisa que ahí no hay notas para cargar. |
+| Cualquier otra página | El panel queda minimizado (botón "🎓 Asistente de SIGED") y avisa que ahí no hay notas para cargar. |
 
 El panel se puede minimizar, arrastrar y recuerda su posición. También se puede abrir desde el ícono de la extensión.
 
@@ -81,7 +81,7 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 1. Descargá o cloná este repositorio.
 2. Abrí `chrome://extensions` (o `edge://extensions`), activá **Modo de desarrollador**.
 3. **Cargar extensión sin empaquetar** → elegí la carpeta `CargaNotasSIGED`.
-4. Recargá la página de SIGED (F5): el panel aparece abajo a la izquierda.
+4. Recargá la página de SIGED (F5): el panel **Asistente de SIGED** aparece abajo a la derecha (se puede minimizar y arrastrar).
 
 > Instrucciones detalladas de instalación y distribución en [INSTALACION.md](./INSTALACION.md).
 
@@ -122,6 +122,9 @@ La detección se hace por el contenido, no por la URL:
 3. Si podés, agregá una captura del panel y los mensajes de la consola (F12).
 
 ## 📝 Changelog
+
+### v3.3
+- 🎨 El panel pasa a llamarse **Asistente de SIGED** y aparece abajo a la derecha.
 
 ### v3.2
 - ✨ **Cierre de promedios por alumno:** recorrido automático de todos los alumnos y Excel con los juicios y rendimientos de todas las reuniones (todos los alumnos en una hoja), más notas, promedios y resumen.

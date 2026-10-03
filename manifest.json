@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "SIGED - Carga de Notas",
-  "version": "3.2",
+  "name": "Asistente de SIGED",
+  "version": "3.3",
   "description": "Importá y exportá notas en SIGED con un panel que detecta solo en qué página estás: Evaluaciones, Boletín por libreta y Libro del Profesor. Planillas Excel/CSV y exportaciones de CREA.",
   "permissions": [
     "activeTab",
