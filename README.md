@@ -4,7 +4,7 @@ Extensión de Chrome/Edge para **importar y exportar notas en SIGED sin pasarlas
 Muestra un panel dentro de la propia página de SIGED que **detecta solo en qué pantalla estás** y
 ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se hace con dos o tres clics.
 
-![Version](https://img.shields.io/badge/version-3.1-blue)
+![Version](https://img.shields.io/badge/version-3.2-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-Compatible-brightgreen)
 ![Edge](https://img.shields.io/badge/Edge-Compatible-brightgreen)
 
@@ -16,6 +16,7 @@ ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se h
 | **Evaluaciones** (escritos, parciales, orales, etc.) | 📥 Exportar las notas ya cargadas · 📤 Importar notas desde un archivo. |
 | **Pasaje de calificaciones boletín por libreta** (semestrales, reuniones) | 📥 Exportar notas y juicios · 📤 Importar notas y juicios desde un archivo. |
 | **Orales, Escritos y O. Actividades** (detalle por alumno) | 📥 Descargar un Excel con **todas las notas y comentarios**, los **promedios por período** (notas por tipo, rendimiento e inasistencias) y un resumen por alumno. De un alumno o de todos los visibles. |
+| **Cierre de promedios por alumno** | 🔄 **Recorre solo todos los alumnos** de la libreta (la página cambia de alumno sola) y al terminar avisa y descarga un Excel con los **juicios y rendimientos de todas las reuniones**, todos los alumnos en una misma hoja. También exporta el alumno visible. |
 | Cualquier otra página | El panel queda minimizado (botón "📚 Carga de Notas") y avisa que ahí no hay notas para cargar. |
 
 El panel se puede minimizar, arrastrar y recuerda su posición. También se puede abrir desde el ícono de la extensión.
@@ -45,7 +46,17 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
    - **Promedios:** una fila por alumno y período con las notas por tipo (Orales, Escritas, O. Act), el **Rendimiento (R)** y las inasistencias (justificadas, no justificadas, fictas).
    - **Resumen:** una fila por alumno con documento, curso, antecedentes, calificaciones semestrales y el rendimiento de cada período.
 
-> Los **juicios de las reuniones** no aparecen en esa página de SIGED. Para exportarlos, entrá a **Pasaje de calificaciones boletín por libreta**, elegí la reunión (por ejemplo la anterior) y usá **Descargar notas de esta página**: el Excel incluye la columna Juicio.
+> Los **juicios de las reuniones** no aparecen en esa página de SIGED. Para tenerlos todos juntos usá el flujo 5 (Cierre de promedios por alumno).
+
+### 5. Exportar los juicios y notas históricas de todos los alumnos (Cierre de promedios por alumno)
+1. Entrá en SIGED a **Cierre de promedios por alumno** y elegí la libreta (se muestra un alumno por vez).
+2. En el panel hacé clic en **Recorrer los N alumnos y exportar todo**. La extensión pasa alumno por alumno usando los números de lista de SIGED; la página se recarga en cada paso y el panel muestra el avance. No uses la pestaña hasta que termine.
+3. Al terminar, el panel avisa y el Excel se descarga solo. Si querés cortar antes, **Detener y descargar lo leído** genera el archivo con lo que ya se recorrió.
+4. El Excel tiene, además de Notas, Promedios y Resumen, dos hojas de juicios:
+   - **Juicios:** un alumno por fila; para cada reunión, el **rendimiento** y el **juicio de asignatura** (y el juicio de reunión si existe). Ideal para ver todos los juicios viejos juntos.
+   - **Juicios (lista):** una fila por alumno y reunión con rendimiento, calidad, fecha y juicios.
+
+> El avance del recorrido se guarda en la pestaña (sessionStorage), así sobrevive a cada recarga. Si pasó más de una hora o abriste otra página, se descarta.
 
 ## 🧾 Archivos que entiende
 
@@ -88,7 +99,7 @@ CargaNotasSIGED/
 ├── shared/
 │   ├── matching.js        # Comparación de nombres (Levenshtein, tokens, asignación única)
 │   ├── formatos.js        # Lectura/escritura de Excel y CSV, detección de columnas y formatos
-│   └── detalle.js         # Lectura de "Orales, Escritos y O. Actividades" y armado del Excel con promedios
+│   └── detalle.js         # Lectura de "Orales, Escritos y O. Act." y "Cierre de promedios por alumno"; Excel con juicios y promedios
 ├── lib/xlsx.full.min.js   # SheetJS (Apache-2.0) para leer y generar archivos Excel
 ├── popup.html / popup.js  # Ventana del ícono: muestra dónde estás y abre el panel
 ├── icon16.png, icon48.png, icon128.png
@@ -101,6 +112,7 @@ La detección se hace por el contenido, no por la URL:
 - **Boletín:** existe el campo `vCALIFXREUCALIFCOD_0001` (nota) y `vCALIFXREUJUICIO_0001` (juicio).
 - **Evaluaciones (Calificaciones Libreta):** existe el campo `vCALIFCOD_0001` (nota) y `vLIBDCOMENTARIO_0001` (comentario). El panel muestra el tipo de evaluación (Escritos, Parcial, Orales…), su fecha y la reunión a la que está asignada. Si la evaluación es de tipo **Semáforo**, acepta Verde / Amarillo / Rojo en la columna Nota.
 - **Libro del Profesor:** existe el selector de libreta `vLIBIDSELEC` y las tarjetas de alumnos.
+- **Cierre de promedios por alumno:** existen `GridjuiciosContainerTbl`, `TXTAPELLIDO` y la botonera `TXTALUMNOS`. Se leen las filas de "Calificaciones y juicios" (`span_CTLREUDSC1_XXXX`, `vCALIFXREUCALIFCOD_XXXX`, `vCALIFXREUJUICIO_XXXX`, `span_CTLJFALXREUJUICIO_XXXX`) y lo mismo que en la página de detalle.
 - **Orales, Escritos y O. Actividades:** existen `TXTNROLISTA_0001` y `TXTAPELLIDO_0001`. Se leen las tablas por período (`beTableLibretaEval`), las semestrales (`TXTCALIFICACION_XXXX`) y la grilla de detalle (`span_vLIBDFEC_RRRRXXXX`, `span_vTDLIBDSCPAN_…`, `span_vCALIFICACION_…`, `span_vLIBDCOMENTARIOGRID_…`). El período de cada evaluación se deduce del orden en que SIGED la muestra en el resumen y, si no coincide, de los meses del nombre del período.
 - Los nombres de los alumnos se leen de `span_vFALUNOMCOM_XXXX`. Si SIGED recarga la grilla (por ejemplo al cambiar de libreta), el panel se actualiza solo.
 
@@ -110,6 +122,9 @@ La detección se hace por el contenido, no por la URL:
 3. Si podés, agregá una captura del panel y los mensajes de la consola (F12).
 
 ## 📝 Changelog
+
+### v3.2
+- ✨ **Cierre de promedios por alumno:** recorrido automático de todos los alumnos y Excel con los juicios y rendimientos de todas las reuniones (todos los alumnos en una hoja), más notas, promedios y resumen.
 
 ### v3.1
 - ✨ Exportación de la página **Orales, Escritos y O. Actividades**: Excel con todas las evaluaciones y comentarios, promedios por período (notas por tipo, rendimiento, inasistencias) y resumen por alumno. De un alumno o de todos.

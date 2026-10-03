@@ -53,9 +53,8 @@
         return partes.join(' ');
     }
 
-    /** Resumen por período de un alumno (web component W0188 + idx) */
-    function leerPeriodos(idx) {
-        const cont = $id('gxHTMLWrpW0188' + idx) || $id('TABLEGRILLAEVAL_' + idx);
+    /** Resumen por período de un alumno (contenedor con las tablas beTableLibretaEval) */
+    function leerPeriodos(cont) {
         if (!cont) return [];
         const periodos = [];
         cont.querySelectorAll('table.beTableLibretaEval').forEach(tabla => {
@@ -86,8 +85,7 @@
     }
 
     /** Evaluaciones semestrales ("Evaluación | Calif.") de la cabecera del alumno */
-    function leerSemestrales(idx) {
-        const cont = $id('TXTCALIFICACION_' + idx);
+    function leerSemestrales(cont) {
         if (!cont) return [];
         const res = [];
         // La grilla interna es la que tiene las filas "E. Semestral | 5"; el encabezado va en <thead>
@@ -101,14 +99,14 @@
         return res;
     }
 
-    /** Grilla de detalle del alumno: una fila por evaluación */
-    function leerEvaluaciones(idx) {
+    /** Grilla de detalle del alumno: una fila por evaluación. sufijoAlumno = idx del alumno ('' si la página muestra uno solo) */
+    function leerEvaluaciones(sufijoAlumno) {
         const evaluaciones = [];
         for (let r = 1; r <= MAX_EVALUACIONES; r++) {
-            const suf = idx4(r) + idx;
+            const suf = idx4(r) + (sufijoAlumno || '');
             const fecha = $id('span_vLIBDFEC_' + suf);
             if (!fecha) break;
-            const notaEl = $id('span_vCALIFICACION_' + suf);
+            const notaEl = $id('span_vCALIFICACION_' + suf) || $id('span_vCALIFCOD_' + suf);
             let nota = '';
             if (notaEl) {
                 const dot = notaEl.querySelector('div[style*="border-radius"]');
@@ -215,8 +213,8 @@
                 origen: texto($id('TXTORIGEN_' + idx)),
                 antecedentes: texto($id('TXTANTECEDENTES_' + idx)),
                 diagnostico: texto($id('TXTDIAGNOSTICO_' + idx)),
-                semestrales: leerSemestrales(idx),
-                periodos: leerPeriodos(idx),
+                semestrales: leerSemestrales($id('TXTCALIFICACION_' + idx)),
+                periodos: leerPeriodos($id('gxHTMLWrpW0188' + idx) || $id('TABLEGRILLAEVAL_' + idx)),
                 evaluaciones: leerEvaluaciones(idx),
                 detalleCargado: !!$id('GrillaevaldetalleContainer_' + idx + 'Tbl')
             };
@@ -224,6 +222,135 @@
             alumnos.push(alumno);
         }
         return alumnos;
+    }
+
+    // ------------------------------------------------------------------
+    //  Página "Cierre de promedios por alumno": un alumno por vez, con la
+    //  grilla "Calificaciones y juicios" (una fila por reunión) y navegación
+    //  por número de lista (enlaces reales: la página se recarga).
+    // ------------------------------------------------------------------
+    function detectarCierre() {
+        return !!($id('GridjuiciosContainerTbl') && $id('TXTAPELLIDO') && $id('TXTALUMNOS'));
+    }
+
+    function textoSelect(sel) {
+        if (!sel) return '';
+        const op = sel.options[sel.selectedIndex];
+        return op ? texto(op) || op.value.trim() : '';
+    }
+
+    /** Filas de "Calificaciones y juicios" (una por reunión) */
+    function leerReuniones() {
+        const reuniones = [];
+        for (let r = 1; r <= 100; r++) {
+            const idx = idx4(r);
+            const nombreEl = $id('span_CTLREUDSC1_' + idx) || $id('span_vREUDSC_' + idx);
+            const codEl = $id('span_vREUCOD_' + idx);
+            if (!nombreEl && !codEl) break;
+            const fechaEl = $id('vCALIFXREUFEC_' + idx);
+            const fecha = fechaEl ? String(fechaEl.value || '') : '';
+            const juicioEl = $id('vCALIFXREUJUICIO_' + idx);
+            const juicioReuEl = $id('span_CTLJFALXREUJUICIO_' + idx);
+            const imgReu = $id('vIMGJUICIOREU_' + idx);
+            let juicioReunion = texto(juicioReuEl);
+            if (!juicioReunion && imgReu) juicioReunion = String(imgReu.getAttribute('alt') || '').replace(/^Juicio Reu\.?:\s*/i, '').trim();
+            reuniones.push({
+                codigo: texto(codEl),
+                nombre: texto(nombreEl) || texto(codEl),
+                rendimiento: textoSelect($id('vCALIFXREUCALIFCOD_' + idx)),
+                conducta: textoSelect($id('vCALIFXREUCONCALIFCOD_' + idx)),
+                calidad: textoSelect($id('vCALIDCOD_' + idx)),
+                categoria: textoSelect($id('vCATCOD_' + idx)),
+                fecha: /\d/.test(fecha) ? fecha.trim() : '',
+                juicio: juicioEl ? String(juicioEl.value || '').trim() : '',
+                juicioReunion
+            });
+        }
+        return reuniones;
+    }
+
+    /** Enlaces de la botonera de alumnos (N° 1, 2, 3...). El actual no tiene enlace activo. */
+    function enlacesAlumnos() {
+        const cont = $id('TXTALUMNOS');
+        if (!cont) return [];
+        return Array.from(cont.querySelectorAll('a')).map(a => ({
+            nro: texto(a),
+            href: a.getAttribute('href') || '',
+            actual: /desactivado/.test(a.className)
+        })).filter(e => e.nro);
+    }
+
+    /** Lee el alumno que se muestra en la página de cierre */
+    function leerAlumnoCierre() {
+        const apellido = texto($id('TXTAPELLIDO'));
+        const nombres = texto($id('TXTNOMBRES'));
+        const alumno = {
+            idx: '',
+            nro: texto($id('TXTNROLISTA')).replace(/^N[°º]\s*/i, ''),
+            apellido,
+            nombres,
+            nombre: `${apellido} ${nombres}`.trim(),
+            documento: texto($id('TXTDOCUMENTO')),
+            curso: texto($id('TXTCURSO')),
+            origen: texto($id('TXTORIGEN')),
+            antecedentes: texto($id('TXTANTECEDENTES')),
+            diagnostico: texto($id('TXTDIAGNOSTICO')),
+            semestrales: leerSemestrales($id('TXTCALIFICACION')),
+            periodos: leerPeriodos(document.body), // la página muestra un solo alumno
+            evaluaciones: leerEvaluaciones(''),
+            reuniones: leerReuniones(),
+            detalleCargado: !!$id('GrillaevaldetalleContainerTbl')
+        };
+        asignarPeriodos(alumno);
+        return alumno;
+    }
+
+    function libretaCierre() {
+        return textoSelect($id('vLIBID')).replace(/^Seleccione.*$/i, '');
+    }
+
+    /** Hojas de juicios (formato ancho: un alumno por fila; y formato lista) */
+    function hojasJuicios(alumnos) {
+        const nombres = [];
+        alumnos.forEach(a => (a.reuniones || []).forEach(r => { if (!nombres.includes(r.nombre)) nombres.push(r.nombre); }));
+        const conDatos = nombres.filter(n => alumnos.some(a => (a.reuniones || []).some(r => r.nombre === n && (r.rendimiento || r.juicio || r.juicioReunion || r.calidad))));
+        const tieneCalidad = alumnos.some(a => (a.reuniones || []).some(r => r.calidad));
+        const tieneReu = alumnos.some(a => (a.reuniones || []).some(r => r.juicioReunion));
+        const tieneConducta = alumnos.some(a => (a.reuniones || []).some(r => r.conducta));
+
+        const encAncho = ['N°', 'Alumno', 'Documento'];
+        const anchosAncho = [5, 34, 12];
+        conDatos.forEach(n => {
+            encAncho.push(n + ' - Rend.'); anchosAncho.push(10);
+            if (tieneConducta) { encAncho.push(n + ' - Comp.'); anchosAncho.push(10); }
+            if (tieneCalidad) { encAncho.push(n + ' - Calidad'); anchosAncho.push(14); }
+            encAncho.push(n + ' - Juicio'); anchosAncho.push(60);
+            if (tieneReu) { encAncho.push(n + ' - Juicio reunión'); anchosAncho.push(40); }
+        });
+        const filasAncho = alumnos.map(a => {
+            const fila = [a.nro, a.nombre, a.documento];
+            conDatos.forEach(n => {
+                const r = (a.reuniones || []).find(x => x.nombre === n) || {};
+                fila.push(r.rendimiento || '');
+                if (tieneConducta) fila.push(r.conducta || '');
+                if (tieneCalidad) fila.push(r.calidad || '');
+                fila.push(r.juicio || '');
+                if (tieneReu) fila.push(r.juicioReunion || '');
+            });
+            return fila;
+        });
+
+        const filasLista = [];
+        alumnos.forEach(a => (a.reuniones || []).forEach(r => {
+            if (!(r.rendimiento || r.juicio || r.juicioReunion || r.calidad || r.conducta)) return;
+            filasLista.push([a.nro, a.nombre, r.nombre, r.rendimiento, r.conducta, r.calidad, r.fecha, r.juicio, r.juicioReunion]);
+        }));
+
+        return [
+            { nombre: 'Juicios', encabezados: encAncho, filas: filasAncho, anchos: anchosAncho },
+            { nombre: 'Juicios (lista)', encabezados: ['N°', 'Alumno', 'Reunión', 'Rend.', 'Comp.', 'Calidad', 'Fecha eval.', 'Juicio asignatura', 'Juicio reunión'],
+              filas: filasLista, anchos: [5, 34, 24, 8, 8, 14, 12, 70, 40] }
+        ];
     }
 
     /** Cantidad total de alumnos de la libreta (filtro "Filtrar por alumno") y nombre seleccionado */
@@ -292,8 +419,9 @@
             return fila;
         });
 
+        const hojasPrevias = alumnos.some(a => a.reuniones && a.reuniones.length) ? hojasJuicios(alumnos) : [];
         return {
-            hojas: [
+            hojas: hojasPrevias.concat([
                 {
                     nombre: 'Notas',
                     encabezados: ['N°', 'Alumno', 'Período', 'Fecha', 'Tipo', 'Nota', 'Comentario', 'Registrado por'],
@@ -315,9 +443,12 @@
                     filas: resumen,
                     anchos: [5, 24, 20, 12, 24, 16, 40, 40].concat(nombresSemestrales.map(() => 16)).concat(nombresPeriodos.map(() => 22)).concat([12])
                 }
-            ]
+            ])
         };
     }
 
-    global.SigedDetalle = { detectar, leerAlumnos, totalAlumnosLibreta, botones, construirHojas, colorATexto };
+    global.SigedDetalle = {
+        detectar, leerAlumnos, totalAlumnosLibreta, botones, construirHojas, colorATexto,
+        detectarCierre, leerAlumnoCierre, enlacesAlumnos, libretaCierre
+    };
 })(typeof window !== 'undefined' ? window : globalThis);

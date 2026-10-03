@@ -73,6 +73,9 @@ function pintarEstado(estado) {
     if (estado.pagina === 'libro') {
         btnImportar.classList.add('hidden');
         txtExportar.innerHTML = 'Descargar plantilla del grupo (Excel)<small>Lista de alumnos para completar con las notas</small>';
+    } else if (estado.pagina === 'cierre') {
+        btnImportar.classList.add('hidden');
+        txtExportar.innerHTML = 'Descargar Excel de este alumno<small>Para recorrer todos los alumnos usá el panel en la página</small>';
     } else if (estado.pagina === 'detalle') {
         btnImportar.classList.add('hidden');
         txtExportar.innerHTML = 'Descargar Excel con notas y promedios<small>Evaluaciones, comentarios, promedios por período y resumen</small>';
