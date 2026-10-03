@@ -91,6 +91,7 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 4. Recargá la página de SIGED (F5): el panel **Asistente de SIGED** aparece abajo a la derecha (se puede minimizar y arrastrar).
 
 > Instrucciones detalladas de instalación y distribución en [INSTALACION.md](./INSTALACION.md).
+> Para publicar en la Chrome Web Store: subí el ZIP de `dist/` (o generalo con `./empaquetar.sh`) y usá las imágenes de `store/`.
 
 ## 🛡️ Seguridad y privacidad
 - Todo ocurre en tu navegador: los archivos no se suben a ningún servidor.
