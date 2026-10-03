@@ -4,7 +4,7 @@ Extensión de Chrome/Edge para **importar y exportar notas en SIGED sin pasarlas
 Muestra un panel dentro de la propia página de SIGED que **detecta solo en qué pantalla estás** y
 ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se hace con dos o tres clics.
 
-![Version](https://img.shields.io/badge/version-3.3-blue)
+![Version](https://img.shields.io/badge/version-3.4-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-Compatible-brightgreen)
 ![Edge](https://img.shields.io/badge/Edge-Compatible-brightgreen)
 
@@ -37,6 +37,13 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 ### 3. Subir la exportación de calificaciones de CREA
 1. En CREA exportá el libro de calificaciones (CSV con `Nombre, Apellido, Título de la tarea, Calificación`).
 2. En la evaluación de SIGED: **Importar notas desde archivo**, elegí la tarea de CREA que querés cargar.
+
+### 3b. Copiar una evaluación a otro apartado sin archivos (por ejemplo de Escritos a Parcial)
+1. En **Orales, Escritos y O. Actividades** (con TODOS los alumnos a la vista) elegí la evaluación en **Copiar una evaluación a otro apartado** (se listan por tipo y fecha, por ejemplo "Escritos · 15/09/2026") y hacé clic en **Guardar en el asistente**. También podés hacerlo desde la propia página de **Evaluaciones** con el enlace "Guardar estas notas en el asistente".
+2. Entrá en SIGED a la evaluación de destino (por ejemplo Parcial): el panel muestra la tarjeta **Notas guardadas en el asistente** con la evaluación, la cantidad de alumnos y hace cuánto se guardó.
+3. **Cargar estas notas acá** abre la misma vista previa que una importación: revisás y confirmás. Las notas y comentarios guardados se conservan en el navegador hasta 30 días o hasta que elijas "Ya no las necesito".
+
+> Se guarda una sola evaluación a la vez para que sea simple. Si preferís un archivo, cada evaluación también se puede descargar en Excel desde el mismo lugar.
 
 ### 4. Exportar todas las notas de la libreta con promedios (Orales, Escritos y O. Actividades)
 1. Entrá en SIGED a **Orales, Escritos y O. Actividades**. Si solo ves un alumno, hacé clic en **TODOS** (el panel tiene un botón que lo hace por vos) y en **Mostrar detalle (todos)**.
@@ -122,6 +129,9 @@ La detección se hace por el contenido, no por la URL:
 3. Si podés, agregá una captura del panel y los mensajes de la consola (F12).
 
 ## 📝 Changelog
+
+### v3.4
+- ✨ **Copiar una evaluación a otro apartado sin archivos:** desde el detalle por alumno (o desde Evaluaciones) se guarda una evaluación en el asistente y la página de destino ofrece cargarla con un clic.
 
 ### v3.3
 - 🎨 El panel pasa a llamarse **Asistente de SIGED** y aparece abajo a la derecha.
