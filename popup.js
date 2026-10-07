@@ -3,7 +3,7 @@
 // (content.js). Este popup solo detecta en qué página está el docente y le
 // ofrece los botones correspondientes.
 
-const SCRIPTS_CONTENIDO = ['lib/xlsx.full.min.js', 'shared/matching.js', 'shared/formatos.js', 'shared/detalle.js', 'content.js'];
+const SCRIPTS_CONTENIDO = ['lib/xlsx.full.min.js', 'shared/matching.js', 'shared/formatos.js', 'shared/detalle.js', 'shared/corrector.js', 'content.js'];
 let tabActual = null;
 let estadoActual = null;
 
@@ -73,6 +73,9 @@ function pintarEstado(estado) {
     if (estado.pagina === 'libro') {
         btnImportar.classList.add('hidden');
         txtExportar.innerHTML = 'Descargar plantilla del grupo (Excel)<small>Lista de alumnos para completar con las notas</small>';
+    } else if (estado.pagina === 'corrector') {
+        btnImportar.classList.add('hidden');
+        document.getElementById('btnExportar').classList.add('hidden');
     } else if (estado.pagina === 'cierre') {
         btnImportar.classList.add('hidden');
         txtExportar.innerHTML = 'Descargar Excel de este alumno<small>Para recorrer todos los alumnos usá el panel en la página</small>';

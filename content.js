@@ -19,6 +19,7 @@
     const M = window.SigedMatching;
     const F = window.SigedFormatos;
     const D = window.SigedDetalle;
+    const C = window.SigedCorrector;
     const UMBRAL_MATCH = 0.70;
     const MAX_FILAS = 2000;
 
@@ -400,6 +401,26 @@
             aplicar: null
         },
 
+        // ---------------- Corrector por curso (un alumno con todas sus materias) ----------------
+        corrector: {
+            clave: 'corrector',
+            etiqueta: 'Corrector por curso',
+            icono: '🪪',
+            detectar: () => !!C && C.detectar(),
+            contexto() {
+                const a = estado.filas[0];
+                return { libreta: a ? a.periodo : '', evaluacion: '', titulo: tituloPagina() };
+            },
+            leerFilas() {
+                const a = C.leerAlumno();
+                return a.nombre ? [Object.assign(a, { tok: M.tokens(a.nombre) })] : [];
+            },
+            columnasExport() { return []; },
+            filaExport() { return []; },
+            campos: { comentario: 'Juicio' },
+            aplicar: null
+        },
+
         // ---------------- Cierre de promedios por alumno (un alumno por vez, juicios por reunión) ----------------
         cierre: {
             clave: 'cierre',
@@ -429,6 +450,7 @@
     };
 
     function detectarPagina() {
+        if (PAGINAS.corrector.detectar()) return PAGINAS.corrector;
         // El cierre por alumno comparte campos con el boletín: se prueba primero
         if (PAGINAS.cierre.detectar()) return PAGINAS.cierre;
         if (PAGINAS.boletin.detectar()) return PAGINAS.boletin;
@@ -454,6 +476,7 @@
         resultado: null,      // resumen tras aplicar
         alumnoSel: '',        // página de detalle: idx del alumno a exportar ('' = todos los visibles)
         actividadSel: '',     // página de detalle: evaluación elegida para copiar (clave tipo|fecha)
+        comparacionSel: '',   // corrector: evaluación anterior con la que se compara ('' = automática)
         colapsado: false
     };
 
@@ -1066,6 +1089,36 @@
         .punto { width: 9px; height: 9px; border-radius: 50%; background: #95a5a6; display: inline-block; }
         .punto.on { background: #2ecc71; }
         .ayuda { font-size: 11px; color: #7f8c8d; line-height: 1.5; }
+        .ficha { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+        .ficha .cab { display: flex; gap: 12px; align-items: center; }
+        .ficha .foto { width: 64px; height: 80px; border-radius: 8px; object-fit: cover; background: #ecf0f1; border: 1px solid #d5dbe0; flex: none; }
+        .ficha .sinfoto { width: 64px; height: 80px; border-radius: 8px; background: #ecf0f1; border: 1px solid #d5dbe0; flex: none; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+        .ficha .nom { font-size: 15px; font-weight: 700; line-height: 1.2; }
+        .ficha .sub { font-size: 11px; color: #5a6c7d; margin-top: 3px; line-height: 1.5; }
+        .ficha .visado { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: #d4edda; color: #155724; }
+        .ficha .novisado { background: #fff3cd; color: #856404; }
+        .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .kpi { background: #f8f9fa; border-radius: 8px; padding: 8px 6px; text-align: center; }
+        .kpi .v { font-size: 20px; font-weight: 700; line-height: 1.1; }
+        .kpi .e { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: #7f8c8d; margin-top: 2px; }
+        .kpi.rojo .v { color: #c0392b; }
+        .kpi.verde .v { color: #27ae60; }
+        .faltas { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11px; }
+        .faltas span { background: #f8f9fa; border-radius: 6px; padding: 3px 8px; color: #2c3e50; }
+        .faltas b { color: #2c3e50; }
+        .faltas b.alerta { color: #c0392b; }
+        .tend { font-size: 12px; line-height: 1.5; }
+        .tend .t { font-weight: 700; }
+        .tend .sube { color: #1e8449; }
+        .tend .baja { color: #c0392b; }
+        .tend .igual { color: #7f8c8d; }
+        .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 6px; }
+        .chip { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: #f1f3f5; color: #2c3e50; }
+        .chip.sube { background: #e8f5e9; color: #1e8449; }
+        .chip.baja { background: #fdecea; color: #c0392b; }
+        .chip.rojo { background: #fdecea; color: #c0392b; font-weight: 700; }
+        .comparar { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #5a6c7d; }
+        .comparar select { width: auto; padding: 2px 4px; font-size: 11px; }
     `;
 
     raiz.innerHTML = `
@@ -1092,6 +1145,9 @@
                 <div class="cuerpo">${renderCuerpo()}</div>
             </div>`;
         activarArrastre();
+        cont.querySelectorAll('.ficha img.foto').forEach(img => {
+            img.addEventListener('error', () => { const d = document.createElement('div'); d.className = 'sinfoto'; d.textContent = '🧑‍🎓'; img.replaceWith(d); }, { once: true });
+        });
     }
 
     function renderDonde() {
@@ -1105,11 +1161,13 @@
                     </div>`;
         }
         const partes = [];
-        if (ctx.libreta) partes.push(`<b>${p.clave === 'detalle' ? 'Curso/Gr/Asig' : 'Libreta'}:</b> ${escapeHtml(ctx.libreta)}`);
+        if (ctx.libreta) partes.push(`<b>${p.clave === 'detalle' ? 'Curso/Gr/Asig' : p.clave === 'corrector' ? 'Reunión' : 'Libreta'}:</b> ${escapeHtml(ctx.libreta)}`);
         if (ctx.evaluacion) partes.push(`<b>Evaluación:</b> ${escapeHtml(ctx.evaluacion)}`);
         if (ctx.reunion) partes.push(`<b>Asignada a:</b> ${escapeHtml(ctx.reunion)}`);
         if (p.clave === 'cierre') {
             partes.push(`<b>Alumno:</b> ${estado.filas[0] ? escapeHtml('N° ' + estado.filas[0].nro + ' · ' + estado.filas[0].nombre) : '—'}${ctx.totalLibreta ? ' (de ' + ctx.totalLibreta + ')' : ''}`);
+        } else if (p.clave === 'corrector') {
+            // la mini ficha ya muestra al alumno
         } else {
             partes.push(`<b>Alumnos${p.clave === 'detalle' ? ' visibles' : ''}:</b> ${estado.filas.length}${p.clave === 'detalle' && ctx.totalLibreta ? ' de ' + ctx.totalLibreta : ''}`);
         }
@@ -1131,6 +1189,7 @@
         if (!p) return html + renderMensaje();
 
         const xlsx = F.tieneXLSX();
+        if (p.clave === 'corrector') return html + renderCorrector();
         if (p.clave === 'detalle') return html + renderDetalle();
         if (p.clave === 'cierre') return html + renderCierre();
         if (p.clave === 'libro') {
@@ -1163,6 +1222,57 @@
         html += renderMensaje();
         if (estado.archivo) html += renderArchivo();
         return html;
+    }
+
+    /** Mini ficha del alumno en "Corrector por curso" */
+    function renderCorrector() {
+        const a = estado.filas[0];
+        if (!a) return `<div class="msg msg-aviso">No hay un alumno visible en la página.</div>`;
+        const r = C.resumen(a, estado.comparacionSel);
+        const fmt = n => (n === null || n === undefined ? '—' : String(n).replace('.', ','));
+        const chip = (m, clase, detalle) => `<span class="chip ${clase}" title="${escapeHtml(m.nombre)}">${escapeHtml(m.nombre)}${detalle ? ' ' + detalle : ''}</span>`;
+        const f = a.faltas;
+        const totalFaltas = ['justificadas', 'injustificadas', 'fictas'].reduce((n, k) => n + (parseInt(f[k], 10) || 0), 0);
+
+        let html = `<div class="ficha">
+            <div class="cab">
+                ${a.foto ? `<img class="foto" src="${escapeHtml(a.foto)}" alt="">` : `<div class="sinfoto">🧑‍🎓</div>`}
+                <div>
+                    <div class="nom">${escapeHtml(a.apellidos)}<br><span style="font-weight:500">${escapeHtml(a.nombres)}</span></div>
+                    <div class="sub">${a.documento ? 'Doc. ' + escapeHtml(a.documento) + ' · ' : ''}${escapeHtml(a.periodo || a.titulo)}<br>
+                        <span class="visado ${a.visado ? '' : 'novisado'}">${a.visado ? 'VISADO' : 'SIN VISAR'}</span>
+                        ${a.minimo ? `<span class="ayuda"> · baja = menos de ${a.minimo}</span>` : ''}</div>
+                </div>
+            </div>
+            <div class="kpis">
+                <div class="kpi"><div class="v">${fmt(r.promedio)}</div><div class="e">Promedio</div></div>
+                <div class="kpi ${r.bajas.length ? 'rojo' : 'verde'}"><div class="v">${r.bajas.length}</div><div class="e">Bajas</div></div>
+                <div class="kpi ${totalFaltas > 0 ? '' : 'verde'}"><div class="v">${totalFaltas}</div><div class="e">Faltas</div></div>
+            </div>
+            <div class="faltas">
+                ${[['Justificadas', f.justificadas], ['Injustificadas', f.injustificadas], ['Fictas', f.fictas], ['Llegadas tarde', f.tardes]]
+                    .filter(([e, v]) => v !== '' || e !== 'Llegadas tarde')
+                    .map(([e, v]) => `<span>${e} <b class="${(parseInt(v, 10) || 0) > 0 ? 'alerta' : ''}">${escapeHtml(v || '0')}</b></span>`).join('')}
+            </div>`;
+
+        if (r.bajas.length) {
+            html += `<div class="tend"><span class="t baja">Bajas en:</span></div><div class="chips">${r.bajas.map(m => chip(m, 'rojo', escapeHtml(m.nota))).join('')}</div>`;
+        }
+
+        if (a.anteriores.length) {
+            html += `<div class="comparar">Comparado con
+                <select data-act="comparar">${a.anteriores.map(c => `<option value="${escapeHtml(c.clave)}" ${r.comparacion && c.clave === r.comparacion.clave ? 'selected' : ''}>${escapeHtml(c.titulo)}</option>`).join('')}</select>
+                ${r.promedioAnterior !== null ? `<span>(promedio ${fmt(r.promedioAnterior)} → ${fmt(r.promedio)})</span>` : ''}</div>`;
+            const flecha = i => `${i.antes}→${i.ahora}`;
+            html += `<div class="tend">`;
+            html += `<span class="t sube">▲ Subió ${r.subieron.length}</span>${r.subieron.length ? ':' : ''}</div><div class="chips">${r.subieron.map(i => chip(i, 'sube', flecha(i))).join('')}</div>`;
+            html += `<div class="tend"><span class="t baja">▼ Bajó ${r.bajaron.length}</span>${r.bajaron.length ? ':' : ''}</div><div class="chips">${r.bajaron.map(i => chip(i, 'baja', flecha(i))).join('')}</div>`;
+            html += `<div class="tend"><span class="t igual">= Igual ${r.iguales.length}</span>${r.sinDato.length ? ` <span class="igual">· sin dato ${r.sinDato.length}</span>` : ''}</div>`;
+        } else {
+            html += `<div class="ayuda">No hay evaluaciones anteriores para comparar. Activá "Mostrar todas las evaluaciones anteriores" en SIGED.</div>`;
+        }
+        html += `<div class="ayuda">${a.materias.length} materias en esta reunión. La ficha se actualiza sola al cambiar de alumno.</div></div>`;
+        return html + renderMensaje();
     }
 
     function renderDetalle() {
@@ -1380,6 +1490,9 @@
             estado.resultado = null;
             recalcularAsignacion();
             render();
+        } else if (act === 'comparar') {
+            estado.comparacionSel = el.value;
+            render();
         } else if (act === 'actividad-detalle') {
             estado.actividadSel = el.value;
             estado.mensaje = null;
@@ -1494,7 +1607,8 @@
                 case 'exportar':
                     montar();
                     setColapsado(false);
-                    if (estado.pagina && estado.pagina.clave === 'detalle') exportarDetalle();
+                    if (estado.pagina && estado.pagina.clave === 'corrector') { estado.mensaje = { tipo: 'info', texto: 'En esta página el asistente muestra la ficha del alumno; no hay nada para exportar.' }; render(); }
+                    else if (estado.pagina && estado.pagina.clave === 'detalle') exportarDetalle();
                     else if (estado.pagina && estado.pagina.clave === 'cierre') exportarCierreActual();
                     else exportar(req.formato);
                     sendResponse({ ok: true });

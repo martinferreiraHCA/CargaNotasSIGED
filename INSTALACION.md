@@ -7,7 +7,7 @@
 2. Asegúrate de tener todos los archivos y carpetas:
    - `manifest.json`
    - `content.js`
-   - `shared/matching.js`, `shared/formatos.js` y `shared/detalle.js`
+   - `shared/matching.js`, `shared/formatos.js`, `shared/detalle.js` y `shared/corrector.js`
    - `lib/xlsx.full.min.js`
    - `popup.js` y `popup.html`
    - `icon16.png`, `icon48.png`, `icon128.png`
@@ -48,6 +48,7 @@
    - **Evaluaciones** y **Pasaje de calificaciones boletín:** botones para exportar e importar notas.
    - **Orales, Escritos y O. Actividades:** botón para descargar el Excel con notas, comentarios y promedios por período.
    - **Cierre de promedios por alumno:** botón para recorrer todos los alumnos y descargar el Excel con los juicios de todas las reuniones.
+   - **Corrector por curso:** mini ficha del alumno con foto, promedio, bajas, faltas y materias que subieron o bajaron.
 4. Al importar, revisa la vista previa, haz clic en **Cargar notas en la página** y luego en **Guardar** en SIGED.
 
 También puedes hacer clic en el ícono de la extensión: muestra dónde estás y abre el panel.
