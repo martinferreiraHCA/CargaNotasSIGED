@@ -1263,6 +1263,7 @@
                     .map(([e, v]) => `<span>${e} <b class="${(parseInt(v, 10) || 0) > 0 ? 'alerta' : ''}">${escapeHtml(v || '0')}</b></span>`).join('')}
             </div>`;
 
+        if (a.aviso) html += `<div class="msg msg-aviso">${escapeHtml(a.aviso)}</div>`;
         if (r.bajas.length) {
             html += `<div class="tend"><span class="t baja">Bajas en:</span></div><div class="chips">${r.bajas.map(m => chip(m, 'rojo', escapeHtml(m.nota))).join('')}</div>`;
         }

@@ -80,13 +80,22 @@
                 });
             }
             // "Mostrar todas las asignaturas" (cierre de promedios): una celda por materia con su nota en el período
+            // Los tooltips de SIGED (tipsy) mueven el title a "original-title" al pasar el mouse, por eso se leen ambos.
             periodo.materias = [];
-            tabla.querySelectorAll('table.table td[title]').forEach(td => {
-                const nombre = String(td.getAttribute('title') || '').trim();
-                if (!nombre) return;
-                const clon = td.cloneNode(true);
-                clon.querySelectorAll('.Superscript, sup').forEach(e => e.remove());
-                periodo.materias.push({ nombre, nota: texto(clon) });
+            tabla.querySelectorAll('table.table td').forEach(td => {
+                const nombre = ['title', 'original-title', 'data-original-title', 'data-title', 'aria-label']
+                    .map(a => String(td.getAttribute(a) || '').trim()).find(Boolean) || '';
+                const sup = td.querySelector('.Superscript, sup');
+                const indice = sup ? texto(sup) : '';
+                // La nota es el texto suelto de la celda (fuera del superíndice)
+                let nota = Array.from(td.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent).join('').replace(/\s+/g, ' ').trim();
+                if (!nota) {
+                    const clon = td.cloneNode(true);
+                    clon.querySelectorAll('.Superscript, sup').forEach(e => e.remove());
+                    nota = texto(clon);
+                }
+                if (!nombre && !indice && !nota) return;
+                periodo.materias.push({ nombre, indice, nota });
             });
             periodos.push(periodo);
         });
