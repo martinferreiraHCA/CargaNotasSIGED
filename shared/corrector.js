@@ -188,5 +188,36 @@
         return res;
     }
 
-    global.SigedCorrector = { detectar, leerAlumno, resumen, comparacionPorDefecto, minimoAprobacion };
+    /**
+     * Arma, a partir de un alumno de "Cierre de promedios por alumno" (SigedDetalle.leerAlumnoCierre con
+     * "Mostrar todas las asignaturas" activo), un objeto con la misma forma que leerAlumno() para
+     * reutilizar resumen() y la mini ficha. El período actual es el último con notas por materia.
+     */
+    function fichaDesdeCierre(c) {
+        const conNotas = (c.periodos || []).filter(p => (p.materias || []).some(m => m.nota));
+        if (!conNotas.length) return null;
+        const actual = conNotas[conNotas.length - 1];
+        const previos = conNotas.slice(0, -1);
+        const minimo = c.escalaMax >= 12 ? 6 : (c.escalaMax >= 10 ? 5 : 6);
+        const anteriores = previos.map((p, i) => ({ clave: 'p' + i, titulo: p.nombre, orden: i }));
+        const materias = actual.materias.map(m => {
+            const ant = {};
+            previos.forEach((p, i) => {
+                const x = (p.materias || []).find(y => y.nombre === m.nombre);
+                ant['p' + i] = x ? x.nota : '';
+            });
+            const n = numero(m.nota);
+            return { nombre: m.nombre, nota: m.nota, notaNum: n, comportamiento: '', juicio: '', fictas: '', anteriores: ant, baja: n !== null && n < minimo };
+        });
+        const ina = actual.inasistencias || {};
+        const semestral = (c.semestrales || []).map(s => `${s.evaluacion}: ${s.calificacion}`).join(' · ');
+        return {
+            apellidos: c.apellido, nombres: c.nombres, nombre: c.nombre, documento: c.documento,
+            foto: c.foto || '', titulo: c.curso || '', periodo: actual.nombre, visado: null, extra: semestral,
+            faltas: { justificadas: ina.J || '', injustificadas: ina.NJ || '', fictas: ina.Fic || '', tardes: '' },
+            juicioGeneral: '', escala: c.escalaMax ? 'N' + c.escalaMax : '', minimo, anteriores, materias
+        };
+    }
+
+    global.SigedCorrector = { detectar, leerAlumno, resumen, comparacionPorDefecto, minimoAprobacion, fichaDesdeCierre };
 })(typeof window !== 'undefined' ? window : globalThis);
