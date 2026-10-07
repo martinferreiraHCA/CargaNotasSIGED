@@ -200,22 +200,34 @@
         const previos = conNotas.slice(0, -1);
         const minimo = c.escalaMax >= 12 ? 6 : (c.escalaMax >= 10 ? 5 : 6);
         const anteriores = previos.map((p, i) => ({ clave: 'p' + i, titulo: p.nombre, orden: i }));
+
+        // Nombre de cada materia por su número: si en un período falta el title (tooltip), se toma de otro período
+        const nombrePorIndice = {};
+        (c.periodos || []).forEach(p => (p.materias || []).forEach(m => { if (m.indice && m.nombre && !nombrePorIndice[m.indice]) nombrePorIndice[m.indice] = m.nombre; }));
+        const nombreDe = (m) => m.nombre || nombrePorIndice[m.indice] || (m.indice ? 'Materia ' + m.indice : '');
+        const mismaMateria = (a, b) => (a.indice && b.indice) ? a.indice === b.indice : nombreDe(a) === nombreDe(b);
+        let sinNombre = 0;
+
         const materias = actual.materias.map(m => {
+            const nombre = nombreDe(m);
+            if (!m.nombre && !nombrePorIndice[m.indice]) sinNombre++;
             const ant = {};
             previos.forEach((p, i) => {
-                const x = (p.materias || []).find(y => y.nombre === m.nombre);
+                const x = (p.materias || []).find(y => mismaMateria(y, m));
                 ant['p' + i] = x ? x.nota : '';
             });
             const n = numero(m.nota);
-            return { nombre: m.nombre, nota: m.nota, notaNum: n, comportamiento: '', juicio: '', fictas: '', anteriores: ant, baja: n !== null && n < minimo };
-        });
+            return { nombre, nota: m.nota, notaNum: n, comportamiento: '', juicio: '', fictas: '', anteriores: ant, baja: n !== null && n < minimo };
+        }).filter(m => m.nombre);
+        if (typeof console !== 'undefined') console.debug('Asistente de SIGED · materias leídas en ' + actual.nombre + ':', materias.map(m => m.nombre + '=' + m.nota).join(', '));
         const ina = actual.inasistencias || {};
         const semestral = (c.semestrales || []).map(s => `${s.evaluacion}: ${s.calificacion}`).join(' · ');
         return {
             apellidos: c.apellido, nombres: c.nombres, nombre: c.nombre, documento: c.documento,
             foto: c.foto || '', titulo: c.curso || '', periodo: actual.nombre, visado: null, extra: semestral,
             faltas: { justificadas: ina.J || '', injustificadas: ina.NJ || '', fictas: ina.Fic || '', tardes: '' },
-            juicioGeneral: '', escala: c.escalaMax ? 'N' + c.escalaMax : '', minimo, anteriores, materias
+            juicioGeneral: '', escala: c.escalaMax ? 'N' + c.escalaMax : '', minimo, anteriores, materias,
+            aviso: sinNombre ? `${sinNombre} materia(s) sin nombre en la página (se muestran por número).` : ''
         };
     }
 
