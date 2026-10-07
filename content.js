@@ -476,11 +476,13 @@
         resultado: null,      // resumen tras aplicar
         alumnoSel: '',        // página de detalle: idx del alumno a exportar ('' = todos los visibles)
         actividadSel: '',     // página de detalle: evaluación elegida para copiar (clave tipo|fecha)
-        comparacionSel: '',   // corrector: evaluación anterior con la que se compara ('' = automática)
+        comparacionSel: '',   // corrector / cierre: evaluación anterior con la que se compara ('' = automática)
+        modoCierre: 'ficha',  // cierre: 'ficha' (ver info del alumno) o 'exportar' (recorrer / Excel)
         colapsado: false
     };
 
     try { estado.colapsado = localStorage.getItem('sigedCargaNotas.colapsado') === '1'; } catch (e) { /* ignorar */ }
+    try { estado.modoCierre = localStorage.getItem('sigedCargaNotas.modoCierre') || 'ficha'; } catch (e) { /* ignorar */ }
 
     function refrescarPagina() {
         const pagina = detectarPagina();
@@ -1228,6 +1230,11 @@
     function renderCorrector() {
         const a = estado.filas[0];
         if (!a) return `<div class="msg msg-aviso">No hay un alumno visible en la página.</div>`;
+        return renderFichaAlumno(a);
+    }
+
+    /** Mini ficha (compartida por Corrector por curso y Cierre de promedios por alumno) */
+    function renderFichaAlumno(a) {
         const r = C.resumen(a, estado.comparacionSel);
         const fmt = n => (n === null || n === undefined ? '—' : String(n).replace('.', ','));
         const chip = (m, clase, detalle) => `<span class="chip ${clase}" title="${escapeHtml(m.nombre)}">${escapeHtml(m.nombre)}${detalle ? ' ' + detalle : ''}</span>`;
@@ -1240,7 +1247,8 @@
                 <div>
                     <div class="nom">${escapeHtml(a.apellidos)}<br><span style="font-weight:500">${escapeHtml(a.nombres)}</span></div>
                     <div class="sub">${a.documento ? 'Doc. ' + escapeHtml(a.documento) + ' · ' : ''}${escapeHtml(a.periodo || a.titulo)}<br>
-                        <span class="visado ${a.visado ? '' : 'novisado'}">${a.visado ? 'VISADO' : 'SIN VISAR'}</span>
+                        ${a.visado !== null && a.visado !== undefined ? `<span class="visado ${a.visado ? '' : 'novisado'}">${a.visado ? 'VISADO' : 'SIN VISAR'}</span>` : ''}
+                        ${a.extra ? `<span class="ayuda">${escapeHtml(a.extra)}</span>` : ''}
                         ${a.minimo ? `<span class="ayuda"> · baja = menos de ${a.minimo}</span>` : ''}</div>
                 </div>
             </div>
@@ -1271,7 +1279,7 @@
         } else {
             html += `<div class="ayuda">No hay evaluaciones anteriores para comparar. Activá "Mostrar todas las evaluaciones anteriores" en SIGED.</div>`;
         }
-        html += `<div class="ayuda">${a.materias.length} materias en esta reunión. La ficha se actualiza sola al cambiar de alumno.</div></div>`;
+        html += `<div class="ayuda">${a.materias.length} materias en ${escapeHtml(a.periodo || 'esta reunión')}. La ficha se actualiza sola al cambiar de alumno.</div></div>`;
         return html + renderMensaje();
     }
 
@@ -1334,6 +1342,23 @@
                      <button class="link" data-act="recorrido-cancelar">Descartar</button>`;
         }
         if (!alumno) return html + `<div class="msg msg-aviso">No hay un alumno visible. Elegí una libreta y un alumno en SIGED.</div>` + renderMensaje();
+
+        html += `<div class="caja" style="padding:8px 12px"><label style="margin:0 0 4px">¿Qué querés hacer?</label>
+            <select data-act="modo-cierre">
+                <option value="ficha" ${estado.modoCierre !== 'exportar' ? 'selected' : ''}>🪪 Ver la ficha del alumno (notas por materia)</option>
+                <option value="exportar" ${estado.modoCierre === 'exportar' ? 'selected' : ''}>📥 Exportar juicios y notas (recorrido / Excel)</option>
+            </select></div>`;
+
+        if (estado.modoCierre !== 'exportar') {
+            const ficha = C.fichaDesdeCierre(alumno);
+            if (!ficha) {
+                const enlace = D.enlaceAsignaturasCierre();
+                html += `<div class="msg msg-info">Para ver las notas por materia, SIGED tiene que mostrar todas las asignaturas del alumno.</div>`;
+                if (enlace) html += `<button class="btn btn-gris" data-act="siged-asignaturas"><span class="ic">📚</span><span>Mostrar todas las asignaturas en SIGED<small>Equivale al enlace "Mostrar todas las asignaturas"</small></span></button>`;
+                return html + renderMensaje();
+            }
+            return html + renderFichaAlumno(ficha);
+        }
 
         const reunionesConJuicio = (alumno.reuniones || []).filter(r => r.juicio || r.rendimiento).length;
         html += `<button class="btn btn-verde" data-act="recorrido-iniciar"><span class="ic">🔄</span><span>Recorrer los ${ctx.totalLibreta || ''} alumnos y exportar todo (Excel)
@@ -1469,6 +1494,7 @@
             case 'recorrido-cancelar': detenerRecorrido(false); break;
             case 'siged-todos': clicSiged(D.botones().todos, 'mostrar TODOS los alumnos'); break;
             case 'siged-detalle': clicSiged(D.botones().mostrarDetalleTodos, 'mostrar el detalle de todos'); break;
+            case 'siged-asignaturas': clicSiged(D.enlaceAsignaturasCierre(), 'mostrar todas las asignaturas'); break;
         }
     });
 
@@ -1489,6 +1515,12 @@
             estado.tipo = el.value;
             estado.resultado = null;
             recalcularAsignacion();
+            render();
+        } else if (act === 'modo-cierre') {
+            estado.modoCierre = el.value;
+            estado.comparacionSel = '';
+            estado.mensaje = null;
+            try { localStorage.setItem('sigedCargaNotas.modoCierre', el.value); } catch (e) { /* ignorar */ }
             render();
         } else if (act === 'comparar') {
             estado.comparacionSel = el.value;

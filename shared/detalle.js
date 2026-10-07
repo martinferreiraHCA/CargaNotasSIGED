@@ -79,6 +79,15 @@
                     if (m) periodo.inasistencias[m[1].replace(/\.$/, '')] = m[2] || '';
                 });
             }
+            // "Mostrar todas las asignaturas" (cierre de promedios): una celda por materia con su nota en el período
+            periodo.materias = [];
+            tabla.querySelectorAll('table.table td[title]').forEach(td => {
+                const nombre = String(td.getAttribute('title') || '').trim();
+                if (!nombre) return;
+                const clon = td.cloneNode(true);
+                clon.querySelectorAll('.Superscript, sup').forEach(e => e.remove());
+                periodo.materias.push({ nombre, nota: texto(clon) });
+            });
             periodos.push(periodo);
         });
         return periodos;
@@ -299,10 +308,39 @@
             periodos: leerPeriodos(document.body), // la página muestra un solo alumno
             evaluaciones: leerEvaluaciones(''),
             reuniones: leerReuniones(),
+            foto: fotoCierre(),
+            escalaMax: escalaMaximaCierre(),
             detalleCargado: !!$id('GrillaevaldetalleContainerTbl')
         };
+        alumno.asignaturasVisibles = alumno.periodos.some(p => p.materias && p.materias.length);
         asignarPeriodos(alumno);
         return alumno;
+    }
+
+    /** Foto del alumno en el cierre (fondo del contenedor TABLEFOTO) */
+    function fotoCierre() {
+        const cont = $id('TABLEFOTO');
+        const el = cont && cont.querySelector('[style*="background-image"]');
+        const m = el && String(el.getAttribute('style') || '').match(/url\((['"]?)([^'")]+)\1\)/);
+        if (!m) return '';
+        try { return new URL(m[2], location.href).href; } catch (e) { return m[2]; }
+    }
+
+    /** Nota máxima de la escala según las opciones del selector de rendimiento */
+    function escalaMaximaCierre() {
+        for (let r = 1; r <= 100; r++) {
+            const sel = $id('vCALIFXREUCALIFCOD_' + idx4(r));
+            if (!sel) break;
+            const nums = Array.from(sel.options).map(o => parseInt(o.value, 10)).filter(n => !isNaN(n));
+            if (nums.length) return Math.max.apply(null, nums);
+        }
+        return 0;
+    }
+
+    /** Enlace de SIGED "Mostrar/Ocultar todas las asignaturas" */
+    function enlaceAsignaturasCierre() {
+        const s = $id('TEXTDETALLE');
+        return s ? (s.querySelector('a') || s) : null;
     }
 
     function libretaCierre() {
@@ -449,6 +487,6 @@
 
     global.SigedDetalle = {
         detectar, leerAlumnos, totalAlumnosLibreta, botones, construirHojas, colorATexto,
-        detectarCierre, leerAlumnoCierre, enlacesAlumnos, libretaCierre
+        detectarCierre, leerAlumnoCierre, enlacesAlumnos, libretaCierre, enlaceAsignaturasCierre
     };
 })(typeof window !== 'undefined' ? window : globalThis);
