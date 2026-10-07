@@ -4,7 +4,7 @@ Extensión de Chrome/Edge para **importar y exportar notas en SIGED sin pasarlas
 Muestra un panel dentro de la propia página de SIGED que **detecta solo en qué pantalla estás** y
 ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se hace con dos o tres clics.
 
-![Version](https://img.shields.io/badge/version-3.5-blue)
+![Version](https://img.shields.io/badge/version-3.6-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-Compatible-brightgreen)
 ![Edge](https://img.shields.io/badge/Edge-Compatible-brightgreen)
 
@@ -16,7 +16,7 @@ ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se h
 | **Evaluaciones** (escritos, parciales, orales, etc.) | 📥 Exportar las notas ya cargadas · 📤 Importar notas desde un archivo. |
 | **Pasaje de calificaciones boletín por libreta** (semestrales, reuniones) | 📥 Exportar notas y juicios · 📤 Importar notas y juicios desde un archivo. |
 | **Orales, Escritos y O. Actividades** (detalle por alumno) | 📥 Descargar un Excel con **todas las notas y comentarios**, los **promedios por período** (notas por tipo, rendimiento e inasistencias) y un resumen por alumno. De un alumno o de todos los visibles. |
-| **Cierre de promedios por alumno** | 🔄 **Recorre solo todos los alumnos** de la libreta (la página cambia de alumno sola) y al terminar avisa y descarga un Excel con los **juicios y rendimientos de todas las reuniones**, todos los alumnos en una misma hoja. También exporta el alumno visible. |
+| **Cierre de promedios por alumno** | Un selector en el panel elige qué hacer: 🪪 **Ver la ficha del alumno** (con "Mostrar todas las asignaturas" activo: foto, promedio, bajas, faltas y materias que subieron o bajaron respecto del período anterior) o 📥 **Exportar**: recorre solo todos los alumnos de la libreta y descarga un Excel con los **juicios y rendimientos de todas las reuniones**, o solo el alumno visible. |
 | **Corrector por curso** (corrección/visado de boletines) | 🪪 **Mini ficha del alumno**: foto, promedio general, cantidad de bajas (las notas en rojo) y en qué materias, faltas justificadas, injustificadas y fictas, y qué materias subieron o bajaron respecto de la evaluación anterior. Se actualiza sola al cambiar de alumno. |
 | Cualquier otra página | El panel queda minimizado (botón "🎓 Asistente de SIGED") y avisa que ahí no hay notas para cargar. |
 
@@ -122,7 +122,7 @@ La detección se hace por el contenido, no por la URL:
 - **Boletín:** existe el campo `vCALIFXREUCALIFCOD_0001` (nota) y `vCALIFXREUJUICIO_0001` (juicio).
 - **Evaluaciones (Calificaciones Libreta):** existe el campo `vCALIFCOD_0001` (nota) y `vLIBDCOMENTARIO_0001` (comentario). El panel muestra el tipo de evaluación (Escritos, Parcial, Orales…), su fecha y la reunión a la que está asignada. Si la evaluación es de tipo **Semáforo**, acepta Verde / Amarillo / Rojo en la columna Nota.
 - **Libro del Profesor:** existe el selector de libreta `vLIBIDSELEC` y las tarjetas de alumnos.
-- **Cierre de promedios por alumno:** existen `GridjuiciosContainerTbl`, `TXTAPELLIDO` y la botonera `TXTALUMNOS`. Se leen las filas de "Calificaciones y juicios" (`span_CTLREUDSC1_XXXX`, `vCALIFXREUCALIFCOD_XXXX`, `vCALIFXREUJUICIO_XXXX`, `span_CTLJFALXREUJUICIO_XXXX`) y lo mismo que en la página de detalle.
+- **Cierre de promedios por alumno:** existen `GridjuiciosContainerTbl`, `TXTAPELLIDO` y la botonera `TXTALUMNOS`. Con "Mostrar todas las asignaturas" activo, cada período trae una `table.table` con una celda por materia (`td[title]`) y su nota; la ficha toma como período actual el último con notas por materia y compara con el anterior. La foto sale del fondo de `TABLEFOTO` y el mínimo de aprobación, de la escala del selector de rendimiento. Se leen las filas de "Calificaciones y juicios" (`span_CTLREUDSC1_XXXX`, `vCALIFXREUCALIFCOD_XXXX`, `vCALIFXREUJUICIO_XXXX`, `span_CTLJFALXREUJUICIO_XXXX`) y lo mismo que en la página de detalle.
 - **Corrector por curso:** existen `TXTAPELLIDOS`, `GrillaContainerDiv` y el `input[name=GrillaContainerDataV]`. Las materias se leen de ese JSON usando el orden de columnas que GeneXus guarda en `GXState` (`GrillaContainerData`), y los títulos de las evaluaciones anteriores de `vCALIFXREUCALIFCODn_Title`. Una nota cuenta como baja si la celda está en rojo o, si la grilla aún no se dibujó, si es menor al mínimo de la escala (5 en escalas de 10, 6 en escalas de 12). La comparación por defecto es con la última evaluación anterior que no sea semestral o examen; se puede cambiar en la ficha.
 - **Orales, Escritos y O. Actividades:** existen `TXTNROLISTA_0001` y `TXTAPELLIDO_0001`. Se leen las tablas por período (`beTableLibretaEval`), las semestrales (`TXTCALIFICACION_XXXX`) y la grilla de detalle (`span_vLIBDFEC_RRRRXXXX`, `span_vTDLIBDSCPAN_…`, `span_vCALIFICACION_…`, `span_vLIBDCOMENTARIOGRID_…`). El período de cada evaluación se deduce del orden en que SIGED la muestra en el resumen y, si no coincide, de los meses del nombre del período.
 - Los nombres de los alumnos se leen de `span_vFALUNOMCOM_XXXX`. Si SIGED recarga la grilla (por ejemplo al cambiar de libreta), el panel se actualiza solo.
@@ -133,6 +133,9 @@ La detección se hace por el contenido, no por la URL:
 3. Si podés, agregá una captura del panel y los mensajes de la consola (F12).
 
 ## 📝 Changelog
+
+### v3.6
+- ✨ **Ficha del alumno también en Cierre de promedios por alumno** (notas por materia, promedio, bajas, faltas y comparación con el período anterior), con un selector para elegir entre ver la ficha o exportar.
 
 ### v3.5
 - ✨ **Mini ficha del alumno en Corrector por curso:** foto, promedio, bajas, faltas y materias que subieron o bajaron respecto de la evaluación anterior.

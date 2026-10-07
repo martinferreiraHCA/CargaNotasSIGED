@@ -47,7 +47,7 @@
    - **Libro del Profesor:** botón para descargar la plantilla del grupo.
    - **Evaluaciones** y **Pasaje de calificaciones boletín:** botones para exportar e importar notas.
    - **Orales, Escritos y O. Actividades:** botón para descargar el Excel con notas, comentarios y promedios por período.
-   - **Cierre de promedios por alumno:** botón para recorrer todos los alumnos y descargar el Excel con los juicios de todas las reuniones.
+   - **Cierre de promedios por alumno:** selector para ver la ficha del alumno (notas por materia) o recorrer todos los alumnos y descargar el Excel con los juicios de todas las reuniones.
    - **Corrector por curso:** mini ficha del alumno con foto, promedio, bajas, faltas y materias que subieron o bajaron.
 4. Al importar, revisa la vista previa, haz clic en **Cargar notas en la página** y luego en **Guardar** en SIGED.
 
