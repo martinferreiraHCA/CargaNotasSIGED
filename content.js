@@ -386,6 +386,8 @@
             etiqueta: 'Orales, Escritos y O. Actividades',
             icono: '📊',
             detectar: () => !!D && D.detectar(),
+            // Cambia cuando SIGED despliega el detalle o las notas por período (carga por ajax)
+            firma: (filas) => filas.map(a => [a.nombre, a.evaluaciones.length, a.detalleCargado ? 1 : 0, a.periodos.map(p => p.nombre + ':' + Object.values(p.columnas).join(',')).join(';')].join('#')).join('|'),
             contexto() {
                 const titulo = tituloPagina();
                 const alumnos = estado.filas || [];
@@ -407,6 +409,7 @@
             etiqueta: 'Corrector por curso',
             icono: '🪪',
             detectar: () => !!C && C.detectar(),
+            firma: (filas) => filas.map(a => [a.nombre, a.documento, a.foto, a.materias.map(m => m.nombre + '=' + m.nota + '/' + Object.values(m.anteriores).join(',')).join(';'), JSON.stringify(a.faltas)].join('#')).join('|'),
             contexto() {
                 const a = estado.filas[0];
                 return { libreta: a ? a.periodo : '', evaluacion: '', titulo: tituloPagina() };
@@ -427,6 +430,11 @@
             etiqueta: 'Cierre de promedios por alumno',
             icono: '🗂️',
             detectar: () => !!D && D.detectarCierre(),
+            // Incluye las notas por materia de cada período: así la ficha se redibuja apenas SIGED las muestra u oculta
+            firma: (filas) => filas.map(a => [a.nombre, a.nro, a.foto,
+                a.periodos.map(p => p.nombre + ':' + Object.values(p.columnas).join(',') + ':' + Object.values(p.inasistencias).join(',') + ':' + (p.materias || []).map(m => (m.indice || m.nombre) + '=' + m.nota).join(',')).join(';'),
+                (a.reuniones || []).map(r => r.rendimiento + '/' + r.juicio.length).join(','),
+                a.evaluaciones.length].join('#')).join('|'),
             contexto() {
                 const enlaces = D.enlacesAlumnos();
                 const alumno = estado.filas[0];
@@ -491,11 +499,11 @@
         const firmaAntes = estado.firmaFilas || '';
         estado.filas = pagina ? pagina.leerFilas() : [];
         estado.contexto = pagina ? pagina.contexto() : { libreta: '', evaluacion: '', titulo: tituloPagina() };
-        estado.firmaFilas = estado.filas.map(f => f.nombre).join('|');
+        estado.firmaFilas = pagina && pagina.firma ? pagina.firma(estado.filas) : estado.filas.map(f => f.nombre).join('|');
         const cambiaronAlumnos = firmaAntes !== estado.firmaFilas;
         if (cambioPagina || cambiaronAlumnos) {
             estado.resultado = null;
-            if (cambioPagina) estado.mensaje = null;
+            if (cambioPagina || (estado.mensaje && estado.mensaje.tipo === 'info')) estado.mensaje = null;
             if (estado.archivo) recalcularAsignacion();
         }
         return cambioPagina || cambiaronAlumnos;
@@ -1002,6 +1010,19 @@
         </div>`;
     }
 
+    /**
+     * En el cierre, modo ficha: si SIGED todavía no muestra las asignaturas, hace el clic en
+     * "Mostrar todas las asignaturas" por el docente, una sola vez por alumno (evita bucles si falla).
+     */
+    function autoMostrarAsignaturas(alumno, enlace) {
+        if (!enlace || !/mostrar/i.test(enlace.textContent || '')) return false;
+        const clave = (alumno.nro || '') + '|' + alumno.nombre;
+        if (estado.autoAsignaturas === clave) return false;
+        estado.autoAsignaturas = clave;
+        setTimeout(() => { try { enlace.click(); } catch (e) { console.warn('Asistente de SIGED: no se pudo pedir las asignaturas', e); } }, 150);
+        return true;
+    }
+
     /** Hace clic en un control de SIGED (botón TODOS, Mostrar detalle) en nombre del docente */
     function clicSiged(el, descripcion) {
         if (!el) {
@@ -1354,6 +1375,10 @@
             const ficha = C.fichaDesdeCierre(alumno);
             if (!ficha) {
                 const enlace = D.enlaceAsignaturasCierre();
+                if (autoMostrarAsignaturas(alumno, enlace)) {
+                    html += `<div class="msg msg-info">⏳ Pidiendo a SIGED las asignaturas de ${escapeHtml(alumno.apellido || 'este alumno')}… la ficha aparece sola en un momento.</div>`;
+                    return html + renderMensaje();
+                }
                 html += `<div class="msg msg-info">Para ver las notas por materia, SIGED tiene que mostrar todas las asignaturas del alumno.</div>`;
                 if (enlace) html += `<button class="btn btn-gris" data-act="siged-asignaturas"><span class="ic">📚</span><span>Mostrar todas las asignaturas en SIGED<small>Equivale al enlace "Mostrar todas las asignaturas"</small></span></button>`;
                 return html + renderMensaje();
@@ -1593,7 +1618,7 @@
 
     const observador = new MutationObserver(debounce(() => {
         if (refrescarPagina()) render();
-    }, 400));
+    }, 200));
 
     function iniciar() {
         montar();
