@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Armar grupos · Asistente de SIGED</title>
+    <link rel="icon" href="icon48.png">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; color: #2c3e50; background: #eef1f4; }
+        header { background: #2c3e50; color: #fff; padding: 10px 18px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+        header h1 { font-size: 17px; margin: 0; font-weight: 700; white-space: nowrap; }
+        header .libreta { font-size: 13px; opacity: .9; }
+        header select, header input[type=text] { padding: 6px 8px; border-radius: 6px; border: 1px solid #b9c4cf; font-size: 13px; background: #fff; color: #2c3e50; }
+        header .grupo-ctrl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        header .estado { margin-left: auto; font-size: 12px; opacity: .85; white-space: nowrap; }
+        .btn { border: 0; border-radius: 7px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: filter .1s, transform .1s; white-space: nowrap; }
+        .btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-azul { background: #3498db; color: #fff; }
+        .btn-verde { background: #27ae60; color: #fff; }
+        .btn-gris { background: #ecf0f1; color: #2c3e50; }
+        .btn-claro { background: rgba(255,255,255,.15); color: #fff; }
+        .btn-rojo { background: #e74c3c; color: #fff; }
+        .btn-chico { padding: 4px 8px; font-size: 12px; }
+        .barra { background: #fff; border-bottom: 1px solid #d9dee3; padding: 10px 18px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .barra .sep { width: 1px; height: 26px; background: #d9dee3; }
+        .barra label { font-size: 13px; color: #5a6c7d; display: flex; align-items: center; gap: 6px; }
+        .barra input[type=number] { width: 56px; padding: 5px 6px; border: 1px solid #b9c4cf; border-radius: 6px; font-size: 13px; }
+        .barra select { padding: 5px 6px; border: 1px solid #b9c4cf; border-radius: 6px; font-size: 13px; }
+        .mensaje { margin: 10px 18px 0; padding: 10px 14px; border-radius: 8px; border-left: 4px solid; font-size: 13px; display: none; }
+        .mensaje.ok { display: block; background: #d4edda; border-color: #28a745; color: #155724; }
+        .mensaje.aviso { display: block; background: #fff3cd; border-color: #ffc107; color: #856404; }
+        .mensaje.error { display: block; background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .mensaje.info { display: block; background: #d1ecf1; border-color: #17a2b8; color: #0c5460; }
+        main { padding: 14px 18px 40px; display: grid; grid-template-columns: 250px 1fr; gap: 14px; align-items: start; }
+        .columna { background: #fff; border: 1px solid #d9dee3; border-radius: 10px; min-height: 120px; }
+        .columna.sobre, .grupo.sobre { outline: 3px dashed #3498db; outline-offset: -3px; background: #eaf4fb; }
+        .columna h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .4px; color: #7f8c8d; margin: 0; padding: 10px 12px; border-bottom: 1px solid #eef1f4; }
+        .fichas { padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 60px; }
+        .ficha { display: flex; align-items: center; gap: 8px; background: #f8f9fa; border: 1px solid #e3e7eb; border-radius: 8px; padding: 5px 6px; cursor: grab; user-select: none; }
+        .ficha:active { cursor: grabbing; }
+        .ficha.arrastrando { opacity: .4; }
+        .ficha img, .ficha .inicial { width: 36px; height: 44px; border-radius: 6px; object-fit: cover; background: #dfe6ec; flex: none; }
+        .ficha .inicial { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #5a6c7d; font-size: 14px; }
+        .ficha .nombre { flex: 1; font-size: 12px; line-height: 1.2; min-width: 0; }
+        .ficha .nombre b { display: block; font-size: 12px; }
+        .ficha .nota-ind { width: 40px; padding: 3px 4px; border: 1px solid #ccd3d9; border-radius: 5px; font-size: 12px; text-align: center; }
+        .ficha select.mover { width: 24px; padding: 2px; border: 1px solid #ccd3d9; border-radius: 5px; font-size: 11px; background: #fff; }
+        .grupos { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+        .grupo { background: #fff; border: 1px solid #d9dee3; border-radius: 10px; display: flex; flex-direction: column; }
+        .grupo .cab { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid #eef1f4; background: #f4f7fa; border-radius: 10px 10px 0 0; }
+        .grupo .cab input.nombre-grupo { flex: 1; min-width: 0; border: 1px solid transparent; background: transparent; font-weight: 700; font-size: 14px; padding: 4px 6px; border-radius: 6px; color: #2c3e50; }
+        .grupo .cab input.nombre-grupo:hover, .grupo .cab input.nombre-grupo:focus { border-color: #b9c4cf; background: #fff; outline: none; }
+        .grupo .cab .cant { font-size: 11px; color: #7f8c8d; white-space: nowrap; }
+        .grupo .cab .nota-grupo { width: 54px; padding: 4px; border: 1px solid #b9c4cf; border-radius: 6px; font-size: 14px; font-weight: 700; text-align: center; }
+        .grupo .cab .quitar { background: none; border: 0; color: #95a5a6; cursor: pointer; font-size: 16px; padding: 0 4px; }
+        .grupo .cab .quitar:hover { color: #c0392b; }
+        .grupo textarea { margin: 6px 8px 0; border: 1px solid #e3e7eb; border-radius: 6px; padding: 6px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 34px; }
+        .vacio { color: #b0b8bf; font-size: 12px; text-align: center; padding: 12px; border: 1px dashed #d9dee3; border-radius: 8px; }
+        .pie { font-size: 11px; color: #7f8c8d; padding: 6px 10px; border-top: 1px solid #eef1f4; }
+        dialog { border: 0; border-radius: 12px; padding: 18px; box-shadow: 0 10px 40px rgba(0,0,0,.3); width: 360px; max-width: 95vw; font-size: 13px; }
+        dialog::backdrop { background: rgba(0,0,0,.35); }
+        dialog h3 { margin: 0 0 10px; font-size: 15px; }
+        dialog input[type=text] { width: 100%; padding: 8px; border: 1px solid #b9c4cf; border-radius: 6px; font-size: 14px; }
+        dialog .acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+        .ayuda { font-size: 12px; color: #7f8c8d; margin: 0 18px; }
+        .solo-impresion { display: none; }
+        @media print {
+            header, .barra, .mensaje, .ayuda, .ficha .nota-ind, .ficha select.mover, .grupo .cab .quitar, .columna.sin-grupo { display: none !important; }
+            body { background: #fff; }
+            main { display: block; padding: 0; }
+            .solo-impresion { display: block; font-size: 18px; font-weight: 700; margin: 0 0 10px; }
+            .grupos { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .grupo { break-inside: avoid; }
+            .ficha { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>👥 Armar grupos</h1>
+        <span class="libreta" id="libretaNombre">Libreta…</span>
+        <select id="libretaSelect" title="Libreta"></select>
+        <div class="grupo-ctrl">
+            <label style="font-size:12px;opacity:.9">Actividad</label>
+            <select id="actividadSelect" title="Actividad"></select>
+            <button class="btn btn-claro btn-chico" id="btnNuevaActividad" title="Crear una actividad nueva">＋ Nueva</button>
+            <button class="btn btn-claro btn-chico" id="btnRenombrar" title="Cambiar el nombre">✎</button>
+            <button class="btn btn-claro btn-chico" id="btnDuplicar" title="Copiar estos grupos a otra actividad">⧉</button>
+            <button class="btn btn-claro btn-chico" id="btnBorrar" title="Borrar la actividad">🗑</button>
+        </div>
+        <span class="estado" id="estadoGuardado"></span>
+    </header>
+
+    <div class="barra">
+        <label>Repartir en <input type="number" id="cantGrupos" min="1" max="30" value="5"> grupos</label>
+        <label>o grupos de <input type="number" id="tamGrupo" min="1" max="30" value="4"> integrantes</label>
+        <button class="btn btn-azul" id="btnAzar">🎲 Al azar</button>
+        <button class="btn btn-gris" id="btnLista">🔤 En orden de lista</button>
+        <div class="sep"></div>
+        <button class="btn btn-gris" id="btnAgregarGrupo">＋ Agregar grupo</button>
+        <button class="btn btn-gris" id="btnVaciar" title="Pasa a todos los alumnos a Sin grupo">↺ Vaciar grupos</button>
+        <div class="sep"></div>
+        <button class="btn btn-verde" id="btnEnviar" title="Las notas quedan listas para cargarlas en la evaluación de SIGED que elijas">📤 Mandar notas al asistente</button>
+        <button class="btn btn-gris" id="btnExcel">📥 Excel</button>
+        <button class="btn btn-gris" id="btnImprimir" title="Imprimir o guardar en PDF con las fotos">🖨 Imprimir con fotos</button>
+        <select id="respaldoSelect" title="Respaldo">
+            <option value="">💾 Respaldo…</option>
+            <option value="descargar">Descargar respaldo (archivo)</option>
+            <option value="restaurar">Restaurar desde un archivo</option>
+        </select>
+        <input type="file" id="archivoRespaldo" accept=".json" style="display:none">
+    </div>
+
+    <div class="mensaje" id="mensaje"></div>
+    <p class="ayuda" id="ayuda">Arrastrá las fichas a los grupos o usá "Repartir". Todo se guarda solo en este navegador. Poné la nota del grupo arriba a la derecha de cada grupo; si un integrante tiene otra nota, escribila en su ficha.</p>
+
+    <main>
+        <div class="solo-impresion" id="tituloImpresion"></div>
+        <section class="columna sin-grupo" id="sinGrupo" data-grupo="">
+            <h2>Sin grupo (<span id="cantSinGrupo">0</span>)</h2>
+            <div class="fichas" id="fichasSinGrupo"></div>
+        </section>
+        <section class="grupos" id="grupos"></section>
+    </main>
+
+    <dialog id="dialogoNombre">
+        <h3 id="dialogoTitulo">Nombre de la actividad</h3>
+        <input type="text" id="dialogoInput" placeholder="Por ejemplo: Proyecto de óptica" maxlength="80">
+        <div class="acciones">
+            <button class="btn btn-gris" id="dialogoCancelar">Cancelar</button>
+            <button class="btn btn-verde" id="dialogoAceptar">Aceptar</button>
+        </div>
+    </dialog>
+
+    <script src="lib/xlsx.full.min.js"></script>
+    <script src="shared/matching.js"></script>
+    <script src="shared/formatos.js"></script>
+    <script src="shared/almacen.js"></script>
+    <script src="grupos.js"></script>
+</body>
+</html>

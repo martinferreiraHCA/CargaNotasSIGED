@@ -3,7 +3,7 @@
 // (content.js). Este popup solo detecta en qué página está el docente y le
 // ofrece los botones correspondientes.
 
-const SCRIPTS_CONTENIDO = ['lib/xlsx.full.min.js', 'shared/matching.js', 'shared/formatos.js', 'shared/detalle.js', 'shared/corrector.js', 'content.js'];
+const SCRIPTS_CONTENIDO = ['lib/xlsx.full.min.js', 'shared/matching.js', 'shared/formatos.js', 'shared/detalle.js', 'shared/corrector.js', 'shared/almacen.js', 'content.js'];
 let tabActual = null;
 let estadoActual = null;
 
@@ -117,6 +117,11 @@ document.getElementById('btnExportar').addEventListener('click', async () => {
     } else {
         mostrarAlerta('error', 'No se pudo exportar. Recargá la página de SIGED e intentá de nuevo.');
     }
+});
+
+document.getElementById('btnGrupos').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('grupos.html') });
+    window.close();
 });
 
 document.getElementById('btnImportar').addEventListener('click', async () => {

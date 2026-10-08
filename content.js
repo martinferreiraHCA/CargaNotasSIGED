@@ -3,11 +3,12 @@
 // página está el docente y muestra un panel flotante con las acciones que
 // corresponden a esa página:
 //
-//   • Libro del Profesor .......... descargar plantilla del grupo (Excel/CSV)
+//   • Libro del Profesor .......... descargar plantilla del grupo (Excel/CSV) y armar grupos
+//                                   (página propia con las fotos de los alumnos)
 //   • Evaluaciones (escritos, parciales, etc.) .. exportar / importar notas
 //   • Pasaje de calificaciones boletín .......... exportar / importar notas y juicios
 //
-// Depende de shared/matching.js, shared/formatos.js y lib/xlsx.full.min.js
+// Depende de shared/matching.js, shared/formatos.js, shared/almacen.js y lib/xlsx.full.min.js
 // (se cargan antes según manifest.json).
 
 (function () {
@@ -20,6 +21,7 @@
     const F = window.SigedFormatos;
     const D = window.SigedDetalle;
     const C = window.SigedCorrector;
+    const A = window.SigedAlmacen;
     const UMBRAL_MATCH = 0.70;
     const MAX_FILAS = 2000;
 
@@ -595,7 +597,7 @@
         estado.mensaje = null;
         // Las notas guardadas en el asistente se consumen al cargarlas: no vuelven a ofrecerse
         if (estado.archivo && estado.archivo.guardadas && resultado.aplicados > 0) {
-            try { localStorage.removeItem(CLAVE_GUARDADAS); } catch (e) { /* ignorar */ }
+            borrarGuardadas();
             estado.mensaje = { tipo: 'info', texto: 'Las notas guardadas ya se cargaron acá y se quitaron del asistente.' };
         }
         console.log('📊 Resultado de la carga:', resultado);
@@ -877,6 +879,8 @@
         }
         try {
             localStorage.setItem(CLAVE_GUARDADAS, JSON.stringify({ origen, libreta, fecha: Date.now(), entradas: limpias }));
+            // Hay una sola "guardada" a la vez: se descarta la que pudiera haber mandado la página de grupos
+            if (A) A.remove('notasGuardadas').catch(() => {});
             estado.mensaje = { tipo: 'ok', texto: `📋 Guardado en el asistente: ${origen} (${limpias.length} alumno${limpias.length === 1 ? '' : 's'}). Ahora entrá a la evaluación de destino y el panel te ofrece cargarlas.` };
         } catch (e) {
             estado.mensaje = { tipo: 'error', texto: 'No se pudo guardar en el navegador: ' + e.message };
@@ -884,10 +888,49 @@
         render();
     }
 
-    function olvidarGuardadas() {
+    /** Quita las notas guardadas de este sitio y de la copia compartida con las páginas de la extensión */
+    function borrarGuardadas() {
         try { localStorage.removeItem(CLAVE_GUARDADAS); } catch (e) { /* ignorar */ }
+        if (A) A.remove('notasGuardadas').catch(() => {});
+    }
+
+    function olvidarGuardadas() {
+        borrarGuardadas();
         estado.mensaje = null;
         render();
+    }
+
+    /**
+     * Las páginas propias de la extensión (por ejemplo "Armar grupos") dejan las notas en
+     * chrome.storage.local, que el sitio de SIGED no ve. Acá se copian al localStorage del
+     * sitio para que la tarjeta "Notas guardadas en el asistente" las ofrezca como siempre.
+     */
+    function adoptarGuardadas(g) {
+        if (!g || !Array.isArray(g.entradas) || !g.entradas.length) return false;
+        const actual = leerGuardadas();
+        if (actual && actual.fecha === g.fecha && actual.origen === g.origen) return false;
+        try {
+            localStorage.setItem(CLAVE_GUARDADAS, JSON.stringify({ origen: String(g.origen || 'grupos'), libreta: String(g.libreta || ''), fecha: g.fecha || Date.now(), entradas: g.entradas }));
+            return true;
+        } catch (e) { return false; }
+    }
+
+    function sincronizarGuardadas() {
+        if (!A || !A.tieneChrome()) return;
+        A.get('notasGuardadas').then(res => { if (adoptarGuardadas(res.notasGuardadas)) render(); }).catch(() => {});
+        A.onChange(cambios => {
+            if (!cambios.notasGuardadas) return;
+            const nuevo = cambios.notasGuardadas.newValue;
+            const viejo = cambios.notasGuardadas.oldValue;
+            if (nuevo) { if (adoptarGuardadas(nuevo)) render(); return; }
+            // Se consumieron en otra pestaña: se quitan también acá si son las mismas
+            const actual = leerGuardadas();
+            if (viejo && actual && actual.fecha === viejo.fecha) {
+                try { localStorage.removeItem(CLAVE_GUARDADAS); } catch (e) { /* ignorar */ }
+                if (estado.archivo && estado.archivo.guardadas) estado.archivo = null;
+                render();
+            }
+        });
     }
 
     /** Usa las notas guardadas como si fueran un archivo importado (misma vista previa y carga) */
@@ -935,6 +978,106 @@
                     <button class="btn btn-verde" data-act="guardadas-usar"><span class="ic">✅</span><span>Cargar estas notas acá<small>Vas a ver la vista previa antes de confirmar</small></span></button>
                     <div style="text-align:center"><button class="link" data-act="guardadas-olvidar">Ya no las necesito</button></div>
                 </div>`;
+    }
+
+    // =====================================================================
+    //  "Armar grupos": guarda los alumnos de la libreta (con sus fotos) en el
+    //  almacén de la extensión y abre la página propia grupos.html.
+    // =====================================================================
+    const FOTO_ANCHO = 96;
+    const FOTO_ALTO = 120;
+
+    /** Devuelve la foto reducida como data URL (o la URL original si no se puede dibujar) */
+    function fotoReducida(img) {
+        return new Promise(resolve => {
+            if (!img || !img.src) return resolve('');
+            const dibujar = (el) => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = FOTO_ANCHO; canvas.height = FOTO_ALTO;
+                    const ctx = canvas.getContext('2d');
+                    const w = el.naturalWidth || FOTO_ANCHO, h = el.naturalHeight || FOTO_ALTO;
+                    const esc = Math.max(FOTO_ANCHO / w, FOTO_ALTO / h);
+                    const dw = w * esc, dh = h * esc;
+                    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, FOTO_ANCHO, FOTO_ALTO);
+                    ctx.drawImage(el, (FOTO_ANCHO - dw) / 2, (FOTO_ALTO - dh) / 2, dw, dh);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                } catch (e) {
+                    resolve(img.src); // lienzo "contaminado" u otro problema: se guarda el enlace a la foto
+                }
+            };
+            if (img.complete && img.naturalWidth) return dibujar(img);
+            const copia = new Image();
+            copia.onload = () => dibujar(copia);
+            copia.onerror = () => resolve('');
+            copia.src = img.src;
+            setTimeout(() => resolve(''), 8000); // si tarda demasiado, la ficha queda sin foto
+        });
+    }
+
+    function libretaActualId() {
+        const sel = $id('vLIBIDSELEC');
+        if (!sel || !sel.value || sel.value === '0') return '';
+        return `${location.host}|${sel.value}`;
+    }
+
+    async function prepararGrupos() {
+        if (!A) return;
+        const id = libretaActualId();
+        const sel = $id('vLIBIDSELEC');
+        const nombre = (sel && sel.selectedIndex > 0 ? textoDe(sel) : '') || tituloPagina() || 'Libreta';
+        const tarjetas = Array.from(document.querySelectorAll('.ui.cards .card'));
+        if (!id || !tarjetas.length) {
+            estado.mensaje = { tipo: 'aviso', texto: 'Seleccioná una libreta con alumnos para armar grupos.' };
+            render();
+            return;
+        }
+        estado.mensaje = { tipo: 'info', texto: `⏳ Preparando las fichas de ${tarjetas.length} alumnos…` };
+        render();
+        const vistos = new Map();
+        const alumnos = [];
+        for (const card of tarjetas) {
+            const a = card.querySelector('a.header');
+            if (!a) continue;
+            const lineas = String(a.innerText || a.textContent || '').split(/\n+/).map(s => s.trim()).filter(Boolean);
+            const apellido = lineas[0] || '';
+            const nombrePila = lineas.slice(1).join(' ');
+            const completo = `${apellido} ${nombrePila}`.trim();
+            if (!completo) continue;
+            let aid = M.tokens(completo).join(' ') || completo.toLowerCase();
+            const n = (vistos.get(aid) || 0) + 1; vistos.set(aid, n);
+            if (n > 1) aid += ` #${n}`;
+            let foto = '';
+            try { foto = await fotoReducida(card.querySelector('img')); } catch (e) { foto = ''; }
+            alumnos.push({ id: aid, nombre: completo, apellido, nombrePila, foto: foto || '' });
+        }
+        const libreta = { id, nombre, host: location.host, actualizado: Date.now(), alumnos };
+        try {
+            await A.set({ ['libreta:' + id]: libreta });
+        } catch (e) {
+            estado.mensaje = { tipo: 'error', texto: 'No se pudo guardar la libreta en el navegador: ' + e.message };
+            render();
+            return;
+        }
+        const conFoto = alumnos.filter(a => a.foto).length;
+        estado.mensaje = { tipo: 'ok', texto: `👥 Listo: ${alumnos.length} alumnos (${conFoto} con foto). Se abre la página para armar grupos en otra pestaña.` };
+        render();
+        abrirPaginaGrupos(id);
+    }
+
+    function abrirPaginaGrupos(id) {
+        try {
+            chrome.runtime.sendMessage({ action: 'abrirGrupos', libretaId: id }, (resp) => {
+                const err = chrome.runtime.lastError;
+                if (err || !resp || !resp.ok) {
+                    estado.mensaje = { tipo: 'aviso', texto: 'No se pudo abrir la pestaña sola. Hacé clic en el ícono de la extensión y elegí "Armar grupos".' };
+                    render();
+                }
+            });
+        } catch (e) {
+            estado.mensaje = { tipo: 'aviso', texto: 'No se pudo abrir la pestaña sola. Hacé clic en el ícono de la extensión y elegí "Armar grupos".' };
+            render();
+        }
     }
 
     /** Evaluaciones de la página de detalle agrupadas por tipo y fecha (para copiar una puntual) */
@@ -1223,6 +1366,9 @@
                             <span class="ic">📥</span><span>Descargar plantilla del grupo${xlsx ? ' (Excel)' : ' (CSV)'}
                             <small>Lista de alumnos con columnas Nota y Comentario para completar</small></span></button>`;
                 if (xlsx) html += `<div style="text-align:center"><button class="link" data-act="exportar" data-formato="csv">Prefiero descargarla en CSV</button></div>`;
+                html += `<button class="btn btn-verde" data-act="armar-grupos">
+                            <span class="ic">👥</span><span>Armar grupos con este grupo
+                            <small>Fichas con foto para arrastrar, repartir al azar y ponerles nota</small></span></button>`;
                 html += `<div class="ayuda">1. Completá la columna <b>Nota</b> en la plantilla.<br>
                          2. Entrá en SIGED a la evaluación (o al boletín) donde van esas notas.<br>
                          3. Usá <b>Importar notas desde archivo</b> y revisá antes de guardar.</div>`;
@@ -1514,6 +1660,7 @@
             case 'guardar-pagina': guardarPaginaActual(); break;
             case 'guardadas-usar': usarGuardadas(); break;
             case 'guardadas-olvidar': olvidarGuardadas(); break;
+            case 'armar-grupos': prepararGrupos(); break;
             case 'exportar-cierre': exportarCierreActual(); break;
             case 'recorrido-iniciar': iniciarRecorrido(); break;
             case 'recorrido-detener': detenerRecorrido(true); break;
@@ -1622,6 +1769,7 @@
 
     function iniciar() {
         montar();
+        sincronizarGuardadas();
         observador.observe(document.body, { childList: true, subtree: true });
         if (leerRecorrido()) {
             setColapsado(false);

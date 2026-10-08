@@ -18,7 +18,7 @@ Asistente de SIGED es una extensión pensada para docentes que trabajan con el s
 
 QUÉ HACE EN CADA PÁGINA DE SIGED
 
-• Libro del Profesor: descargá la plantilla del grupo en Excel con la lista de alumnos y columnas Nota y Comentario, completala y volvé a importarla.
+• Libro del Profesor: descargá la plantilla del grupo en Excel con la lista de alumnos y columnas Nota y Comentario, completala y volvé a importarla. O armá grupos de trabajo: se abre una página con la ficha y la foto de cada alumno para repartirlos al azar o arrastrarlos, ponerle nota a cada grupo y mandar esas notas al asistente para cargarlas en la evaluación que elijas. Los grupos quedan guardados por actividad en tu navegador.
 
 • Evaluaciones (orales, escritos, parciales, etc.): importá notas y comentarios desde Excel o CSV, o exportá las que ya están cargadas. Funciona también con evaluaciones tipo Semáforo.
 
@@ -87,6 +87,7 @@ Importar y exportar calificaciones, juicios y promedios en las páginas del sist
 
 - `activeTab`: Para actuar sobre la pestaña de SIGED que el usuario tiene abierta cuando hace clic en la extensión.
 - `scripting`: Para inyectar el panel del asistente en la pestaña de SIGED si todavía no está cargado (por ejemplo, cuando la página estaba abierta antes de instalar la extensión).
+- `storage` y `unlimitedStorage`: Para guardar en el navegador del docente los grupos de trabajo de cada actividad y las fichas de los alumnos (nombre y una copia reducida de la foto) que se usan en la página "Armar grupos", de modo que pueda retomarlos después. Las fotos ocupan más que el límite normal de storage.
 - Permisos de host (`*.siged.com.uy`, `*.siged.com`, `*.siged.edu.uy`): La extensión solo funciona dentro del sistema SIGED; necesita leer la lista de alumnos y completar los campos de notas y comentarios de esas páginas.
 
 **¿Usa código remoto?** No. Todo el código, incluida la librería para leer y generar Excel (SheetJS), va empaquetado en la extensión.
