@@ -33,31 +33,41 @@
         .mensaje.aviso { display: block; background: #fff3cd; border-color: #ffc107; color: #856404; }
         .mensaje.error { display: block; background: #f8d7da; border-color: #dc3545; color: #721c24; }
         .mensaje.info { display: block; background: #d1ecf1; border-color: #17a2b8; color: #0c5460; }
-        main { padding: 14px 18px 40px; display: grid; grid-template-columns: 250px 1fr; gap: 14px; align-items: start; }
+        main { padding: 14px 18px 40px; display: grid; grid-template-columns: 200px 1fr; gap: 14px; align-items: start; }
+        .columna.sin-grupo { position: sticky; top: 58px; max-height: calc(100vh - 70px); display: flex; flex-direction: column; }
+        .columna.sin-grupo .fichas { overflow-y: auto; flex: 1; }
+        .columna.sin-grupo .ficha { padding: 3px 4px; gap: 6px; }
+        .columna.sin-grupo .ficha img, .columna.sin-grupo .ficha .inicial { width: 26px; height: 32px; }
+        .columna.sin-grupo .ficha select.mover { display: none; }
+        .columna.sin-grupo .pista { font-size: 11px; color: #7f8c8d; padding: 6px 10px; border-top: 1px solid #eef1f4; }
         .columna { background: #fff; border: 1px solid #d9dee3; border-radius: 10px; min-height: 120px; }
         .columna.sobre, .grupo.sobre { outline: 3px dashed #3498db; outline-offset: -3px; background: #eaf4fb; }
         .columna h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .4px; color: #7f8c8d; margin: 0; padding: 10px 12px; border-bottom: 1px solid #eef1f4; }
-        .fichas { padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 60px; }
-        .ficha { display: flex; align-items: center; gap: 8px; background: #f8f9fa; border: 1px solid #e3e7eb; border-radius: 8px; padding: 5px 6px; cursor: grab; user-select: none; }
+        .fichas { padding: 6px; display: flex; flex-direction: column; gap: 4px; min-height: 48px; }
+        .ficha { display: flex; align-items: center; gap: 6px; background: #f8f9fa; border: 1px solid #e3e7eb; border-radius: 7px; padding: 3px 5px; cursor: grab; user-select: none; }
+        .ficha:hover { border-color: #b9c4cf; }
+        .ficha.elegida { background: #fff3cd; border-color: #f0b429; box-shadow: 0 0 0 2px #ffe08a inset; }
         .ficha:active { cursor: grabbing; }
         .ficha.arrastrando { opacity: .4; }
-        .ficha img, .ficha .inicial { width: 36px; height: 44px; border-radius: 6px; object-fit: cover; background: #dfe6ec; flex: none; }
-        .ficha .inicial { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #5a6c7d; font-size: 14px; }
-        .ficha .nombre { flex: 1; font-size: 12px; line-height: 1.2; min-width: 0; }
-        .ficha .nombre b { display: block; font-size: 12px; }
-        .ficha .nota-ind { width: 40px; padding: 3px 4px; border: 1px solid #ccd3d9; border-radius: 5px; font-size: 12px; text-align: center; }
-        .ficha select.mover { width: 24px; padding: 2px; border: 1px solid #ccd3d9; border-radius: 5px; font-size: 11px; background: #fff; }
-        .grupos { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+        .ficha img, .ficha .inicial { width: 28px; height: 34px; border-radius: 5px; object-fit: cover; background: #dfe6ec; flex: none; pointer-events: none; }
+        .ficha .inicial { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #5a6c7d; font-size: 13px; }
+        .ficha .nombre { flex: 1; font-size: 11px; line-height: 1.15; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ficha .nombre b { font-size: 11px; margin-right: 3px; }
+        .ficha .nota-ind { width: 34px; padding: 2px 3px; border: 1px solid #ccd3d9; border-radius: 5px; font-size: 11px; text-align: center; }
+        .ficha select.mover { width: 22px; padding: 1px; border: 1px solid #ccd3d9; border-radius: 5px; font-size: 11px; background: #fff; }
+        .grupos { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
+        .grupo.destino { outline: 2px dashed #f0b429; outline-offset: -2px; cursor: copy; }
+        .columna.sin-grupo.destino { outline: 2px dashed #f0b429; outline-offset: -2px; cursor: copy; }
         .grupo { background: #fff; border: 1px solid #d9dee3; border-radius: 10px; display: flex; flex-direction: column; }
-        .grupo .cab { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid #eef1f4; background: #f4f7fa; border-radius: 10px 10px 0 0; }
-        .grupo .cab input.nombre-grupo { flex: 1; min-width: 0; border: 1px solid transparent; background: transparent; font-weight: 700; font-size: 14px; padding: 4px 6px; border-radius: 6px; color: #2c3e50; }
+        .grupo .cab { display: flex; align-items: center; gap: 5px; padding: 6px 8px; border-bottom: 1px solid #eef1f4; background: #f4f7fa; border-radius: 10px 10px 0 0; }
+        .grupo .cab input.nombre-grupo { flex: 1; min-width: 0; border: 1px solid transparent; background: transparent; font-weight: 700; font-size: 13px; padding: 3px 5px; border-radius: 6px; color: #2c3e50; }
         .grupo .cab input.nombre-grupo:hover, .grupo .cab input.nombre-grupo:focus { border-color: #b9c4cf; background: #fff; outline: none; }
         .grupo .cab .cant { font-size: 11px; color: #7f8c8d; white-space: nowrap; }
-        .grupo .cab .nota-grupo { width: 54px; padding: 4px; border: 1px solid #b9c4cf; border-radius: 6px; font-size: 14px; font-weight: 700; text-align: center; }
+        .grupo .cab .nota-grupo { width: 46px; padding: 3px; border: 1px solid #b9c4cf; border-radius: 6px; font-size: 14px; font-weight: 700; text-align: center; }
         .grupo .cab .quitar { background: none; border: 0; color: #95a5a6; cursor: pointer; font-size: 16px; padding: 0 4px; }
         .grupo .cab .quitar:hover { color: #c0392b; }
-        .grupo textarea { margin: 6px 8px 0; border: 1px solid #e3e7eb; border-radius: 6px; padding: 6px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 34px; }
-        .vacio { color: #b0b8bf; font-size: 12px; text-align: center; padding: 12px; border: 1px dashed #d9dee3; border-radius: 8px; }
+        .grupo textarea { margin: 5px 6px 0; border: 1px solid #e3e7eb; border-radius: 6px; padding: 4px 6px; font-size: 11px; font-family: inherit; resize: vertical; min-height: 26px; height: 26px; }
+        .vacio { color: #b0b8bf; font-size: 11px; text-align: center; padding: 8px; border: 1px dashed #d9dee3; border-radius: 8px; }
         .pie { font-size: 11px; color: #7f8c8d; padding: 6px 10px; border-top: 1px solid #eef1f4; }
         dialog { border: 0; border-radius: 12px; padding: 18px; box-shadow: 0 10px 40px rgba(0,0,0,.3); width: 360px; max-width: 95vw; font-size: 13px; }
         dialog::backdrop { background: rgba(0,0,0,.35); }
@@ -67,7 +77,9 @@
         .ayuda { font-size: 12px; color: #7f8c8d; margin: 0 18px; }
         .solo-impresion { display: none; }
         @media print {
-            header, .barra, .mensaje, .ayuda, .ficha .nota-ind, .ficha select.mover, .grupo .cab .quitar, .columna.sin-grupo { display: none !important; }
+            header, .barra, .mensaje, .ayuda, .ficha .nota-ind, .ficha select.mover, .grupo .cab .quitar, .columna.sin-grupo, .pista { display: none !important; }
+            .ficha img, .ficha .inicial { width: 40px; height: 50px; }
+            .ficha .nombre { font-size: 12px; white-space: normal; }
             body { background: #fff; }
             main { display: block; padding: 0; }
             .solo-impresion { display: block; font-size: 18px; font-weight: 700; margin: 0 0 10px; }
@@ -114,13 +126,14 @@
     </div>
 
     <div class="mensaje" id="mensaje"></div>
-    <p class="ayuda" id="ayuda">Arrastrá las fichas a los grupos o usá "Repartir". Todo se guarda solo en este navegador. Poné la nota del grupo arriba a la derecha de cada grupo; si un integrante tiene otra nota, escribila en su ficha.</p>
+    <p class="ayuda" id="ayuda">Para armar los grupos: tocá una o varias fichas y después tocá el grupo donde van (o arrastralas). Todo se guarda solo en este navegador. La nota del grupo va arriba a la derecha de cada grupo; si un integrante tiene otra nota, escribila en su ficha.</p>
 
     <main>
         <div class="solo-impresion" id="tituloImpresion"></div>
         <section class="columna sin-grupo" id="sinGrupo" data-grupo="">
             <h2>Sin grupo (<span id="cantSinGrupo">0</span>)</h2>
             <div class="fichas" id="fichasSinGrupo"></div>
+            <div class="pista" id="pista">Arrastrá una ficha al grupo, o tocala (podés tocar varias) y después tocá el grupo.</div>
         </section>
         <section class="grupos" id="grupos"></section>
     </main>

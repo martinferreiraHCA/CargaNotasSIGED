@@ -17,6 +17,7 @@
         libretas: {},           // todas las guardadas (para el selector)
         actividades: [],        // [{id, nombre, creada, modificada, grupos: [{id, nombre, nota, comentario, miembros: [], notas: {}}]}]
         actividadId: '',
+        elegidos: new Set(), // fichas tocadas para mandarlas a un grupo de un solo clic
         guardado: null
     };
 
@@ -166,11 +167,19 @@
         guardar(); render();
     }
 
-    function mover(alumnoId, gid) {
+    function moverVarios(ids, gid) {
+        const act = actividad(); if (!act) return;
+        ids.forEach(id => mover(id, gid, true));
+        estado.elegidos.clear();
+        guardar(); render();
+    }
+
+    function mover(alumnoId, gid, sinRender) {
         const act = actividad(); if (!act) return;
         act.grupos.forEach(g => { g.miembros = g.miembros.filter(id => id !== alumnoId); delete g.notas[alumnoId]; });
         if (gid) { const g = act.grupos.find(x => x.id === gid); if (g) g.miembros.push(alumnoId); }
-        guardar(); render();
+        estado.elegidos.delete(alumnoId);
+        if (!sinRender) { guardar(); render(); }
     }
 
     // ---------------------------------------------------------------- notas → asistente / Excel
@@ -254,7 +263,7 @@
         const act = actividad();
         const opciones = ['<option value="">→</option>', '<option value="_sin">Sin grupo</option>']
             .concat(act.grupos.map(x => `<option value="${x.id}" ${g && x.id === g.id ? 'disabled' : ''}>${escapeHtml(x.nombre)}</option>`)).join('');
-        return `<div class="ficha" draggable="true" data-id="${escapeHtml(a.id)}" title="${escapeHtml(a.nombre)}">
+        return `<div class="ficha${estado.elegidos.has(a.id) ? ' elegida' : ''}" draggable="true" data-id="${escapeHtml(a.id)}" title="${escapeHtml(a.nombre)}">
             ${foto}
             <div class="nombre"><b>${escapeHtml(a.apellido || '')}</b>${escapeHtml(a.nombrePila || '')}</div>
             ${g ? `<input class="nota-ind" data-grupo="${g.id}" data-alumno="${escapeHtml(a.id)}" value="${escapeHtml(g.notas[a.id] || '')}" placeholder="${escapeHtml(g.nota || '—')}" title="Nota de este integrante (si es distinta a la del grupo)">` : ''}
@@ -298,10 +307,11 @@
                     <input class="nota-grupo" data-grupo="${g.id}" value="${escapeHtml(g.nota || '')}" placeholder="Nota" title="Nota del grupo (se asigna a todos sus integrantes)">
                     <button class="quitar" data-grupo="${g.id}" title="Quitar grupo">✕</button>
                 </div>
-                <textarea data-grupo="${g.id}" placeholder="Comentario para todos los integrantes (opcional)">${escapeHtml(g.comentario || '')}</textarea>
-                <div class="fichas">${miembros.length ? miembros.map(a => fichaHtml(a, g)).join('') : '<div class="vacio">Arrastrá fichas acá</div>'}</div>
+                <textarea data-grupo="${g.id}" placeholder="Comentario del grupo (opcional)">${escapeHtml(g.comentario || '')}</textarea>
+                <div class="fichas">${miembros.length ? miembros.map(a => fichaHtml(a, g)).join('') : '<div class="vacio">Tocá o arrastrá fichas acá</div>'}</div>
             </section>`;
         }).join('') || `<div class="vacio" style="grid-column:1/-1;padding:30px">No hay grupos todavía. Usá "Al azar", "En orden de lista" o "Agregar grupo".</div>`;
+        marcarDestinos();
     }
 
     // ---------------------------------------------------------------- eventos
@@ -328,7 +338,9 @@
         ev.preventDefault();
         zona.classList.remove('sobre');
         const id = ev.dataTransfer.getData('text/plain');
-        if (id) mover(id, zona.dataset.grupo || null);
+        if (!id) return;
+        const destino = zona.dataset.grupo || null;
+        if (estado.elegidos.has(id)) moverVarios(Array.from(estado.elegidos), destino); else mover(id, destino);
     });
 
     document.addEventListener('input', (ev) => {
@@ -343,15 +355,36 @@
     document.addEventListener('change', (ev) => {
         const el = ev.target;
         if (el.classList.contains('mover')) { const v = el.value; if (!v) return; mover(el.dataset.alumno, v === '_sin' ? null : v); return; }
-        if (el.id === 'actividadSelect') { estado.actividadId = el.value; render(); return; }
+        if (el.id === 'actividadSelect') { estado.actividadId = el.value; estado.elegidos.clear(); render(); return; }
         if (el.id === 'libretaSelect') { estado.libretaId = el.value; estado.actividadId = ''; history.replaceState(null, '', '?libreta=' + encodeURIComponent(el.value)); cargar(); return; }
         if (el.id === 'respaldoSelect') { const v = el.value; el.value = ''; if (v === 'descargar') descargarRespaldo(); if (v === 'restaurar') $('archivoRespaldo').click(); return; }
         if (el.id === 'archivoRespaldo' && el.files[0]) { restaurarRespaldo(el.files[0]); el.value = ''; }
     });
+    function marcarDestinos() {
+        const hay = estado.elegidos.size > 0;
+        document.querySelectorAll('.grupo, .columna.sin-grupo').forEach(z => z.classList.toggle('destino', hay));
+        const pista = $('pista');
+        if (pista) pista.textContent = hay
+            ? `${estado.elegidos.size} elegida${estado.elegidos.size === 1 ? '' : 's'}: tocá el grupo donde van (o "Sin grupo"). Tocá la ficha de nuevo para soltarla.`
+            : 'Arrastrá una ficha al grupo, o tocala (podés tocar varias) y después tocá el grupo.';
+    }
     document.addEventListener('click', (ev) => {
         const q = ev.target.closest && ev.target.closest('button.quitar');
-        if (q) quitarGrupo(q.dataset.grupo);
+        if (q) { quitarGrupo(q.dataset.grupo); return; }
+        if (ev.target.closest('input, select, textarea, button, a')) return;
+        const act = actividad(); if (!act) return;
+        const f = ev.target.closest('.ficha[data-id]');
+        if (f) {
+            const id = f.dataset.id;
+            if (estado.elegidos.has(id)) estado.elegidos.delete(id); else estado.elegidos.add(id);
+            f.classList.toggle('elegida', estado.elegidos.has(id));
+            marcarDestinos();
+            return;
+        }
+        const zona = ev.target.closest('.grupo, .columna.sin-grupo');
+        if (zona && estado.elegidos.size) moverVarios(Array.from(estado.elegidos), zona.dataset.grupo || null);
     });
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && estado.elegidos.size) { estado.elegidos.clear(); render(); } });
     $('btnNuevaActividad').addEventListener('click', nuevaActividad);
     $('btnRenombrar').addEventListener('click', renombrarActividad);
     $('btnDuplicar').addEventListener('click', duplicarActividad);
