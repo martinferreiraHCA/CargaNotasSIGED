@@ -4,7 +4,7 @@ Extensión de Chrome/Edge para **importar y exportar notas en SIGED sin pasarlas
 Muestra un panel dentro de la propia página de SIGED que **detecta solo en qué pantalla estás** y
 ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se hace con dos o tres clics.
 
-![Version](https://img.shields.io/badge/version-3.6-blue)
+![Version](https://img.shields.io/badge/version-3.7-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-Compatible-brightgreen)
 ![Edge](https://img.shields.io/badge/Edge-Compatible-brightgreen)
 
@@ -133,6 +133,10 @@ La detección se hace por el contenido, no por la URL:
 3. Si podés, agregá una captura del panel y los mensajes de la consola (F12).
 
 ## 📝 Changelog
+
+### v3.7
+- 🐛 El panel se redibuja apenas SIGED carga o cambia el contenido (materias, notas, foto), no solo al cambiar de alumno.
+- ✨ En el cierre, modo ficha: pide solo a SIGED "Mostrar todas las asignaturas" (un clic automático por alumno).
 
 ### v3.6
 - ✨ **Ficha del alumno también en Cierre de promedios por alumno** (notas por materia, promedio, bajas, faltas y comparación con el período anterior), con un selector para elegir entre ver la ficha o exportar.
