@@ -4,7 +4,7 @@ Extensión de Chrome/Edge para **importar y exportar notas en SIGED sin pasarlas
 Muestra un panel dentro de la propia página de SIGED que **detecta solo en qué pantalla estás** y
 ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se hace con dos o tres clics.
 
-![Version](https://img.shields.io/badge/version-3.7-blue)
+![Version](https://img.shields.io/badge/version-3.8-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-Compatible-brightgreen)
 ![Edge](https://img.shields.io/badge/Edge-Compatible-brightgreen)
 
@@ -12,7 +12,7 @@ ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se h
 
 | Página de SIGED | Qué ofrece el panel |
 |-----------------|---------------------|
-| **Libro del Profesor** (lista de alumnos del grupo) | 📥 Descargar la **plantilla del grupo** (Excel o CSV) con todos los alumnos y columnas *Nota* y *Comentario* para completar. |
+| **Libro del Profesor** (lista de alumnos del grupo) | 📥 Descargar la **plantilla del grupo** (Excel o CSV) con todos los alumnos y columnas *Nota* y *Comentario* para completar. · 👥 **Armar grupos**: abre una página propia con las fichas de los alumnos (con su foto de SIGED) para repartirlos al azar o arrastrarlos, ponerle nota a cada grupo y mandar esas notas al asistente para cargarlas en la evaluación que elijas. |
 | **Evaluaciones** (escritos, parciales, orales, etc.) | 📥 Exportar las notas ya cargadas · 📤 Importar notas desde un archivo. |
 | **Pasaje de calificaciones boletín por libreta** (semestrales, reuniones) | 📥 Exportar notas y juicios · 📤 Importar notas y juicios desde un archivo. |
 | **Orales, Escritos y O. Actividades** (detalle por alumno) | 📥 Descargar un Excel con **todas las notas y comentarios**, los **promedios por período** (notas por tipo, rendimiento e inasistencias) y un resumen por alumno. De un alumno o de todos los visibles. |
@@ -45,6 +45,14 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 3. **Cargar estas notas acá** abre la misma vista previa que una importación: revisás y confirmás. Las notas y comentarios guardados se conservan en el navegador hasta 30 días o hasta que elijas "Ya no las necesito".
 
 > Se guarda una sola evaluación a la vez para que sea simple. Si preferís un archivo, cada evaluación también se puede descargar en Excel desde el mismo lugar.
+
+### 3c. Armar grupos de trabajo con fotos y cargarles la nota (Libro del Profesor)
+1. En el **Libro del Profesor**, elegí la libreta y hacé clic en **Armar grupos con este grupo**. Se abre otra pestaña con la ficha de cada alumno (foto y nombre).
+2. Hacé clic en **＋ Nueva** y ponele nombre a la actividad (por ejemplo "Proyecto de óptica").
+3. Elegí **Repartir en N grupos** o **grupos de N integrantes** y usá **🎲 Al azar** o **🔤 En orden de lista**. Después podés arrastrar fichas de un grupo a otro, agregar o quitar grupos y cambiarles el nombre.
+4. Escribí la **nota del grupo** arriba a la derecha de cada grupo (y un comentario, si querés). Si un integrante lleva otra nota, escribila en su ficha.
+5. **📤 Mandar notas al asistente**: entrá en SIGED a la evaluación donde van (Escritos, Parcial, etc.) y el panel te ofrece **Cargar estas notas acá**, con la vista previa de siempre. También podés bajar un **Excel** (hoja *Notas* importable) o **imprimir** los grupos con las fotos.
+6. Todo queda guardado en tu navegador: podés cerrar la pestaña y retomar después (ícono de la extensión → **Armar grupos**), tener varias actividades por libreta y duplicar unos grupos para otra actividad. Con **💾 Respaldo** podés descargar un archivo para pasarlo a otra computadora.
 
 ### 4. Exportar todas las notas de la libreta con promedios (Orales, Escritos y O. Actividades)
 1. Entrá en SIGED a **Orales, Escritos y O. Actividades**. Si solo ves un alumno, hacé clic en **TODOS** (el panel tiene un botón que lo hace por vos) y en **Mostrar detalle (todos)**.
@@ -98,6 +106,7 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 - Todo ocurre en tu navegador: los archivos no se suben a ningún servidor.
 - La extensión **nunca guarda por vos**: solo completa los campos y te lleva al botón *Guardar* de SIGED para que revises.
 - Solo se activa en dominios de SIGED (`*.siged.com.uy`, `*.siged.com`, `*.siged.edu.uy`).
+- Los grupos, las actividades y las fichas de los alumnos (nombre y una copia reducida de la foto, solo de las libretas en las que usaste **Armar grupos**) se guardan en el almacenamiento local de la extensión en tu navegador, nunca fuera de él. Se borran al desinstalar la extensión.
 
 ## 📁 Estructura del proyecto
 
@@ -105,11 +114,14 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 CargaNotasSIGED/
 ├── manifest.json          # Configuración de la extensión (Manifest V3)
 ├── content.js             # Panel en la página: detección de página, importar/exportar, carga de notas
+├── background.js          # Service worker: abre la página de grupos a pedido del panel
+├── grupos.html / grupos.js # Página "Armar grupos": fichas con foto, reparto, notas por grupo, Excel e impresión
 ├── shared/
 │   ├── matching.js        # Comparación de nombres (Levenshtein, tokens, asignación única)
 │   ├── formatos.js        # Lectura/escritura de Excel y CSV, detección de columnas y formatos
 │   ├── detalle.js         # Lectura de "Orales, Escritos y O. Act." y "Cierre de promedios por alumno"; Excel con juicios y promedios
-│   └── corrector.js       # Lectura de "Corrector por curso" y resumen para la mini ficha del alumno
+│   ├── corrector.js       # Lectura de "Corrector por curso" y resumen para la mini ficha del alumno
+│   └── almacen.js         # Almacén local compartido (chrome.storage) entre SIGED y las páginas de la extensión
 ├── lib/xlsx.full.min.js   # SheetJS (Apache-2.0) para leer y generar archivos Excel
 ├── popup.html / popup.js  # Ventana del ícono: muestra dónde estás y abre el panel
 ├── icon16.png, icon48.png, icon128.png
@@ -133,6 +145,11 @@ La detección se hace por el contenido, no por la URL:
 3. Si podés, agregá una captura del panel y los mensajes de la consola (F12).
 
 ## 📝 Changelog
+
+### v3.8
+- ✨ **Armar grupos** desde el Libro del Profesor: página propia con las fichas de los alumnos y sus fotos, reparto al azar o en orden (N grupos o grupos de N), arrastrar y soltar, nota y comentario por grupo (con nota individual opcional), Excel, impresión con fotos y respaldo.
+- ✨ Las actividades con sus grupos quedan guardadas en el navegador por libreta: se retoman, se renombran, se duplican.
+- ✨ **Mandar notas al asistente** desde la página de grupos: la evaluación de SIGED que elijas las ofrece con "Cargar estas notas acá".
 
 ### v3.7
 - 🐛 El panel se redibuja apenas SIGED carga o cambia el contenido (materias, notas, foto), no solo al cambiar de alumno.
