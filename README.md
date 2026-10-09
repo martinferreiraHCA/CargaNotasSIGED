@@ -4,7 +4,7 @@ Extensión de Chrome/Edge para **importar y exportar notas en SIGED sin pasarlas
 Muestra un panel dentro de la propia página de SIGED que **detecta solo en qué pantalla estás** y
 ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se hace con dos o tres clics.
 
-![Version](https://img.shields.io/badge/version-3.8-blue)
+![Version](https://img.shields.io/badge/version-3.8.1-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-Compatible-brightgreen)
 ![Edge](https://img.shields.io/badge/Edge-Compatible-brightgreen)
 
@@ -49,7 +49,7 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 ### 3c. Armar grupos de trabajo con fotos y cargarles la nota (Libro del Profesor)
 1. En el **Libro del Profesor**, elegí la libreta y hacé clic en **Armar grupos con este grupo**. Se abre otra pestaña con la ficha de cada alumno (foto y nombre).
 2. Hacé clic en **＋ Nueva** y ponele nombre a la actividad (por ejemplo "Proyecto de óptica").
-3. Elegí **Repartir en N grupos** o **grupos de N integrantes** y usá **🎲 Al azar** o **🔤 En orden de lista**. Después podés arrastrar fichas de un grupo a otro, agregar o quitar grupos y cambiarles el nombre.
+3. Elegí **Repartir en N grupos** o **grupos de N integrantes** y usá **🎲 Al azar** o **🔤 En orden de lista**. Para retocar, tocá una o varias fichas y después tocá el grupo donde van (o arrastralas); también podés agregar o quitar grupos y cambiarles el nombre.
 4. Escribí la **nota del grupo** arriba a la derecha de cada grupo (y un comentario, si querés). Si un integrante lleva otra nota, escribila en su ficha.
 5. **📤 Mandar notas al asistente**: entrá en SIGED a la evaluación donde van (Escritos, Parcial, etc.) y el panel te ofrece **Cargar estas notas acá**, con la vista previa de siempre. También podés bajar un **Excel** (hoja *Notas* importable) o **imprimir** los grupos con las fotos.
 6. Todo queda guardado en tu navegador: podés cerrar la pestaña y retomar después (ícono de la extensión → **Armar grupos**), tener varias actividades por libreta y duplicar unos grupos para otra actividad. Con **💾 Respaldo** podés descargar un archivo para pasarlo a otra computadora.
@@ -145,6 +145,9 @@ La detección se hace por el contenido, no por la URL:
 3. Si podés, agregá una captura del panel y los mensajes de la consola (F12).
 
 ## 📝 Changelog
+
+### v3.8.1
+- ✨ Página de grupos más cómoda: "Sin grupo" es una barra lateral fija con fichas chicas, los grupos son más compactos y se pueden tocar una o varias fichas y después tocar el grupo de destino (además de arrastrar).
 
 ### v3.8
 - ✨ **Armar grupos** desde el Libro del Profesor: página propia con las fichas de los alumnos y sus fotos, reparto al azar o en orden (N grupos o grupos de N), arrastrar y soltar, nota y comentario por grupo (con nota individual opcional), Excel, impresión con fotos y respaldo.

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Asistente de SIGED",
-  "version": "3.8",
+  "version": "3.8.1",
   "description": "Importá y exportá notas, juicios y promedios en SIGED desde Excel o CSV, sin pasarlos uno por uno. Detecta sola la página.",
   "homepage_url": "https://github.com/martinferreiraHCA/CargaNotasSIGED",
   "permissions": [
