@@ -7,18 +7,18 @@ Texto listo para pegar en el Developer Dashboard (pestañas **Ficha de Play Stor
 **Título del paquete:** Asistente de SIGED
 
 **Resumen del paquete (máx. 132):**
-Importá y exportá notas, juicios y promedios en SIGED desde Excel o CSV, sin pasarlos uno por uno. Detecta sola la página.
+Cargá notas en SIGED desde Excel, armá grupos con las fotos de tus alumnos y exportá juicios y promedios. Detecta sola la página.
 
 **Descripción:**
 
 ```
-Cargá y exportá notas en SIGED sin pasarlas una por una
+Cargá notas en SIGED sin pasarlas una por una y armá grupos con las fotos de tus alumnos
 
 Asistente de SIGED es una extensión pensada para docentes que trabajan con el sistema SIGED (Sistema de Gestión Educativa). Agrega un panel dentro de las propias páginas de SIGED que reconoce solo en qué pantalla estás y te ofrece únicamente los botones que sirven ahí. Todo se hace con dos o tres clics y siempre con una vista previa antes de confirmar.
 
 QUÉ HACE EN CADA PÁGINA DE SIGED
 
-• Libro del Profesor: descargá la plantilla del grupo en Excel con la lista de alumnos y columnas Nota y Comentario, completala y volvé a importarla. O armá grupos de trabajo: se abre una página con la ficha y la foto de cada alumno para repartirlos al azar o arrastrarlos, ponerle nota a cada grupo y mandar esas notas al asistente para cargarlas en la evaluación que elijas. Los grupos quedan guardados por actividad en tu navegador.
+• Libro del Profesor: armá grupos de trabajo con un clic. Se abre una página con la ficha y la foto de cada alumno: repartilos al azar o en orden de lista (en N grupos o en grupos de N), tocá o arrastrá las fichas para acomodarlos, ponele nombre a la actividad y nota a cada grupo (con nota distinta para algún integrante si hace falta). Las notas se mandan al asistente y se cargan en la evaluación de SIGED que elijas, sin planillas. Los grupos quedan guardados por actividad en tu navegador para retomarlos, duplicarlos, imprimirlos con las fotos o bajarlos en Excel. También podés descargar la plantilla del grupo en Excel para completarla con las notas.
 
 • Evaluaciones (orales, escritos, parciales, etc.): importá notas y comentarios desde Excel o CSV, o exportá las que ya están cargadas. Funciona también con evaluaciones tipo Semáforo.
 
@@ -26,7 +26,9 @@ QUÉ HACE EN CADA PÁGINA DE SIGED
 
 • Orales, Escritos y O. Actividades: exportá todas las evaluaciones con comentarios, los promedios por período (notas por tipo, rendimiento e inasistencias) y un resumen por alumno. También podés elegir una evaluación puntual y guardarla en el asistente para cargarla en otro apartado (por ejemplo de Escritos a Parcial) sin descargar ningún archivo.
 
-• Cierre de promedios por alumno: recorre solo todos los alumnos de la libreta y, al terminar, descarga un Excel con los juicios y rendimientos de todas las reuniones, con todos los alumnos en una misma hoja.
+• Cierre de promedios por alumno: ficha del alumno con foto, promedio, bajas, faltas y materias que subieron o bajaron respecto del período anterior. O recorre solo todos los alumnos de la libreta y, al terminar, descarga un Excel con los juicios y rendimientos de todas las reuniones, con todos los alumnos en una misma hoja.
+
+• Corrector por curso: mini ficha de cada alumno al corregir o visar boletines (foto, promedio general, bajas y en qué materias, faltas justificadas, injustificadas y fictas, y qué materias subieron o bajaron). Se actualiza sola al cambiar de alumno.
 
 CÓMO FUNCIONA LA IMPORTACIÓN
 
@@ -47,7 +49,7 @@ SEGURIDAD Y PRIVACIDAD
 
 • Todo ocurre en tu navegador: los archivos y las notas no se envían a ningún servidor.
 • Solo se activa en los dominios de SIGED.
-• No recopila, almacena ni transmite información personal. Lo único que guarda en el navegador es la posición del panel y, si lo pedís, una evaluación para copiarla a otro apartado.
+• No recopila ni transmite información personal. Lo que guarda queda en tu navegador: la posición del panel, una evaluación que elijas copiar a otro apartado y, si usás "Armar grupos", los grupos de cada actividad con el nombre y una copia reducida de la foto de los alumnos de esa libreta. Se borra al desinstalar la extensión.
 
 Desarrollado por un docente para docentes de Uruguay. Código abierto: https://github.com/martinferreiraHCA/CargaNotasSIGED
 ```
@@ -63,7 +65,7 @@ Desarrollado por un docente para docentes de Uruguay. Código abierto: https://g
 | Icono de Chrome Web Store (128×128) | `icono-tienda-128.png` |
 | Captura de pantalla 1 | `captura-1-boletin-importar.png` |
 | Captura de pantalla 2 | `captura-2-evaluaciones.png` |
-| Captura de pantalla 3 | `captura-3-libro-plantilla.png` |
+| Captura de pantalla 3 | `captura-3-armar-grupos.png` |
 | Captura de pantalla 4 | `captura-4-detalle-promedios.png` |
 | Captura de pantalla 5 | `captura-5-cierre-juicios.png` |
 | Imagen en mosaico promocional pequeña (440×280) | `promo-pequeno-440x280.png` |
@@ -81,7 +83,7 @@ Desarrollado por un docente para docentes de Uruguay. Código abierto: https://g
 ## Pestaña Privacidad
 
 **Finalidad única (single purpose):**
-Importar y exportar calificaciones, juicios y promedios en las páginas del sistema SIGED, completando los formularios de notas a partir de archivos Excel o CSV y generando planillas con los datos que muestra la página.
+Ayudar al docente a cargar y exportar calificaciones, juicios y promedios en las páginas del sistema SIGED: completa los formularios de notas a partir de archivos Excel o CSV o de grupos de trabajo armados con los alumnos de la libreta, y genera planillas con los datos que muestra la página.
 
 **Justificación de permisos:**
 
@@ -92,7 +94,7 @@ Importar y exportar calificaciones, juicios y promedios en las páginas del sist
 
 **¿Usa código remoto?** No. Todo el código, incluida la librería para leer y generar Excel (SheetJS), va empaquetado en la extensión.
 
-**Uso de datos:** marcar "No recopila ni usa datos de usuario". La extensión no recopila ni transmite datos: los archivos se procesan localmente y las notas solo se escriben en el formulario de SIGED que el usuario tiene abierto.
+**Uso de datos:** marcar "No recopila ni usa datos de usuario". La extensión no recopila ni transmite datos: los archivos se procesan localmente, las notas solo se escriben en el formulario de SIGED que el usuario tiene abierto y los grupos con las fichas de los alumnos quedan únicamente en el almacenamiento local del navegador (chrome.storage.local), sin salir del equipo.
 
 **Certificaciones:** marcar las tres (no vende datos, no los usa para fines ajenos a la funcionalidad, no los usa para solvencia crediticia).
 
