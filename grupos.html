@@ -14,6 +14,10 @@
         header select, header input[type=text] { padding: 6px 8px; border-radius: 6px; border: 1px solid #b9c4cf; font-size: 13px; background: #fff; color: #2c3e50; }
         header .grupo-ctrl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
         header .estado { margin-left: auto; font-size: 12px; opacity: .85; white-space: nowrap; }
+        header .drive { display: flex; align-items: center; gap: 5px; font-size: 12px; padding-left: 10px; border-left: 1px solid rgba(255,255,255,.25); white-space: nowrap; }
+        header .drive select { padding: 3px 4px; font-size: 11px; }
+        header .drive.ok #driveTexto { color: #9be7a9; }
+        header .drive.error #driveTexto { color: #ffb3a7; }
         .btn { border: 0; border-radius: 7px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: filter .1s, transform .1s; white-space: nowrap; }
         .btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
         .btn:disabled { opacity: .5; cursor: not-allowed; }
@@ -103,6 +107,13 @@
             <button class="btn btn-claro btn-chico" id="btnBorrar" title="Borrar la actividad">🗑</button>
         </div>
         <span class="estado" id="estadoGuardado"></span>
+        <div class="drive" id="drive">
+            <span id="driveTexto">☁ Google Drive</span>
+            <button class="btn btn-claro btn-chico" id="btnDriveConectar" title="Guardar una copia en tu Google Drive (carpeta Asistente de SIGED / año) para retomar desde cualquier computadora">Conectar</button>
+            <button class="btn btn-claro btn-chico" id="btnDriveSync" title="Sincronizar ahora" style="display:none">⟳</button>
+            <select id="driveAnio" title="Traer lo guardado de otro año" style="display:none"><option value="">Retomar año…</option></select>
+            <button class="btn btn-claro btn-chico" id="btnDriveDesconectar" title="Dejar de usar Google Drive" style="display:none">✕</button>
+        </div>
     </header>
 
     <div class="barra">
@@ -151,6 +162,7 @@
     <script src="shared/matching.js"></script>
     <script src="shared/formatos.js"></script>
     <script src="shared/almacen.js"></script>
+    <script src="shared/drive.js"></script>
     <script src="grupos.js"></script>
 </body>
 </html>

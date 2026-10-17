@@ -60,11 +60,112 @@
             try {
                 await A.set({ ['actividades:' + estado.libretaId]: estado.actividades });
                 $('estadoGuardado').textContent = '✓ Guardado en este navegador';
+                pedirSyncDrive();
             } catch (e) {
                 $('estadoGuardado').textContent = '⚠ No se pudo guardar';
                 mensaje('error', 'No se pudo guardar: ' + e.message);
             }
         }, 300);
+    }
+
+    // ---------------------------------------------------------------- Google Drive
+    const tieneRuntime = () => { try { return !!(window.chrome && chrome.runtime && chrome.runtime.sendMessage); } catch (e) { return false; } };
+    function mensajeDrive(op, extra) {
+        return new Promise((resolve, reject) => {
+            if (!tieneRuntime()) return reject(new Error('Solo disponible dentro de la extensión.'));
+            try {
+                chrome.runtime.sendMessage(Object.assign({ action: 'drive', op }, extra || {}), (resp) => {
+                    const err = chrome.runtime.lastError;
+                    if (err) return reject(new Error(err.message));
+                    if (!resp || !resp.ok) return reject(new Error(resp && resp.error ? resp.error : 'Sin respuesta'));
+                    resolve(resp.datos);
+                });
+            } catch (e) { reject(e); }
+        });
+    }
+    function pedirSyncDrive() { if (tieneRuntime()) mensajeDrive('sincronizar', { silencioso: true }).catch(() => {}); }
+
+    function pintarDrive(est) {
+        const cont = $('drive');
+        if (!cont) return;
+        if (!tieneRuntime()) { cont.style.display = 'none'; return; }
+        const conectado = !!(est && est.conectado);
+        cont.classList.toggle('ok', conectado && !(est && est.error));
+        cont.classList.toggle('error', !!(est && est.error));
+        const cuando = est && est.ultimaSync ? ' · ' + hace(est.ultimaSync) : '';
+        $('driveTexto').textContent = conectado
+            ? `☁ Drive: ${est.email || 'conectado'}${cuando}`
+            : (est && est.configurado === false ? '☁ Drive (falta configurar)' : '☁ Google Drive');
+        $('driveTexto').title = est && est.error ? est.error : (conectado ? 'Copia en Google Drive → Asistente de SIGED / ' + (est.anio || '') : 'Guardá una copia en tu Google Drive para retomar desde cualquier computadora');
+        $('btnDriveConectar').style.display = conectado ? 'none' : '';
+        $('btnDriveSync').style.display = conectado ? '' : 'none';
+        $('btnDriveDesconectar').style.display = conectado ? '' : 'none';
+        $('driveAnio').style.display = conectado ? '' : 'none';
+    }
+    function hace(ts) {
+        const min = Math.round((Date.now() - ts) / 60000);
+        if (min < 1) return 'recién'; if (min < 60) return `hace ${min} min`;
+        const h = Math.round(min / 60); if (h < 24) return `hace ${h} h`;
+        return `hace ${Math.round(h / 24)} día(s)`;
+    }
+    async function refrescarDrive() {
+        try { pintarDrive(await mensajeDrive('estado')); } catch (e) { pintarDrive(null); }
+    }
+    async function conectarDrive() {
+        $('btnDriveConectar').disabled = true; $('driveTexto').textContent = '☁ Conectando…';
+        try {
+            const est = await mensajeDrive('conectar');
+            pintarDrive(est);
+            const r = est.ultimoResumen || {};
+            mensaje('ok', `☁ Conectado a Google Drive${est.email ? ' como ' + est.email : ''}. Carpeta "Asistente de SIGED / ${est.anio}": ${(r.subidos || []).length} subido(s), ${(r.bajados || []).length} traído(s).`);
+            if ((r.bajados || []).length) cargar();
+            cargarAniosDrive();
+        } catch (e) {
+            mensaje('error', 'No se pudo conectar con Google: ' + e.message);
+            refrescarDrive();
+        }
+        $('btnDriveConectar').disabled = false;
+    }
+    async function sincronizarDriveAhora() {
+        $('btnDriveSync').disabled = true; $('driveTexto').textContent = '☁ Sincronizando…';
+        try {
+            const est = await mensajeDrive('sincronizar');
+            pintarDrive(est);
+            const r = est.ultimoResumen || {};
+            mensaje('ok', `☁ Sincronizado: ${(r.subidos || []).length} subido(s), ${(r.bajados || []).length} traído(s)${(r.errores || []).length ? ' · ' + r.errores.length + ' error(es)' : ''}.`);
+            if ((r.bajados || []).length) cargar();
+        } catch (e) { mensaje('error', 'No se pudo sincronizar: ' + e.message); refrescarDrive(); }
+        $('btnDriveSync').disabled = false;
+    }
+    async function desconectarDrive() {
+        if (!confirm('¿Dejar de usar Google Drive? Lo guardado en Drive no se borra; solo se corta la conexión en este navegador.')) return;
+        try { pintarDrive(await mensajeDrive('desconectar')); mensaje('info', 'Google Drive desconectado.'); } catch (e) { mensaje('error', e.message); }
+    }
+    async function cargarAniosDrive() {
+        try {
+            const anios = await mensajeDrive('anios');
+            const sel = $('driveAnio');
+            sel.innerHTML = '<option value="">Retomar año…</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
+        } catch (e) { /* sin conexión */ }
+    }
+    async function restaurarDrive(anio) {
+        if (!anio) return;
+        if (!confirm(`¿Traer a este navegador todo lo guardado en Drive del año ${anio}? Lo que ya tengas con el mismo nombre se reemplaza por la copia de Drive.`)) return;
+        try {
+            const r = await mensajeDrive('restaurar', { anio });
+            mensaje('ok', `☁ Se trajeron ${r.bajados.length} elemento(s) del año ${anio}.`);
+            cargar(); refrescarDrive();
+        } catch (e) { mensaje('error', 'No se pudo restaurar: ' + e.message); }
+    }
+    if (tieneRuntime()) {
+        $('btnDriveConectar').addEventListener('click', conectarDrive);
+        $('btnDriveSync').addEventListener('click', sincronizarDriveAhora);
+        $('btnDriveDesconectar').addEventListener('click', desconectarDrive);
+        $('driveAnio').addEventListener('change', (ev) => { const v = ev.target.value; ev.target.value = ''; restaurarDrive(v); });
+        try { chrome.runtime.onMessage.addListener((req) => { if (req && req.action === 'driveActualizado') { cargar(); refrescarDrive(); } }); } catch (e) { /* ignorar */ }
+        refrescarDrive().then(() => mensajeDrive('estado').then(est => { if (est.conectado) cargarAniosDrive(); }).catch(() => {}));
+    } else {
+        pintarDrive(null);
     }
 
     // ---------------------------------------------------------------- actividades

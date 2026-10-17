@@ -20,7 +20,13 @@ QUÉ HACE EN CADA PÁGINA DE SIGED
 
 • Libro del Profesor: armá grupos de trabajo con un clic. Se abre una página con la ficha y la foto de cada alumno: repartilos al azar o en orden de lista (en N grupos o en grupos de N), tocá o arrastrá las fichas para acomodarlos, ponele nombre a la actividad y nota a cada grupo (con nota distinta para algún integrante si hace falta). Las notas se mandan al asistente y se cargan en la evaluación de SIGED que elijas, sin planillas. Los grupos quedan guardados por actividad en tu navegador para retomarlos, duplicarlos, imprimirlos con las fotos o bajarlos en Excel. También podés descargar la plantilla del grupo en Excel para completarla con las notas.
 
-• Evaluaciones (orales, escritos, parciales, etc.): importá notas y comentarios desde Excel o CSV, o exportá las que ya están cargadas. Funciona también con evaluaciones tipo Semáforo.
+• Evaluaciones (orales, escritos, parciales, etc.): importá notas y comentarios desde Excel o CSV, o exportá las que ya están cargadas. Funciona también con evaluaciones tipo Semáforo. La plantilla del Libro puede traer varias tareas (cada una con nota y comentario) y al importarla elegís cuál cargar.
+
+• Anotaciones para el próximo juicio: un cuadro por alumno, que podés activar u ocultar, para anotar actitudes o pendientes durante el período; cuando escribís el juicio en el boletín, el asistente te las recuerda y las pega en el campo con un clic.
+
+• Promedios guardados: cada vez que el asistente ve promedios los guarda por libreta, alumno y período, y desde el Libro del Profesor podés bajar el historial en Excel.
+
+• Google Drive (opcional): conectá tu cuenta y la extensión guarda en tu Drive, en la carpeta Asistente de SIGED / año, una copia de los grupos, fichas, anotaciones y promedios para retomarlos desde cualquier computadora o al año siguiente.
 
 • Pasaje de calificaciones boletín por libreta: importá y exportá notas y juicios de la reunión.
 
@@ -49,7 +55,7 @@ SEGURIDAD Y PRIVACIDAD
 
 • Todo ocurre en tu navegador: los archivos y las notas no se envían a ningún servidor.
 • Solo se activa en los dominios de SIGED.
-• No recopila ni transmite información personal. Lo que guarda queda en tu navegador: la posición del panel, una evaluación que elijas copiar a otro apartado y, si usás "Armar grupos", los grupos de cada actividad con el nombre y una copia reducida de la foto de los alumnos de esa libreta. Se borra al desinstalar la extensión.
+• No recopila ni transmite información personal a ningún servidor propio. Lo que guarda queda en tu navegador (grupos, fichas con una copia reducida de la foto, anotaciones y promedios de tus libretas) y se borra al desinstalar la extensión. Solo si conectás tu cuenta de Google se copia a tu propio Drive, con un permiso que únicamente alcanza a los archivos que la extensión crea.
 
 Desarrollado por un docente para docentes de Uruguay. Código abierto: https://github.com/martinferreiraHCA/CargaNotasSIGED
 ```
@@ -89,12 +95,15 @@ Ayudar al docente a cargar y exportar calificaciones, juicios y promedios en las
 
 - `activeTab`: Para actuar sobre la pestaña de SIGED que el usuario tiene abierta cuando hace clic en la extensión.
 - `scripting`: Para inyectar el panel del asistente en la pestaña de SIGED si todavía no está cargado (por ejemplo, cuando la página estaba abierta antes de instalar la extensión).
-- `storage` y `unlimitedStorage`: Para guardar en el navegador del docente los grupos de trabajo de cada actividad y las fichas de los alumnos (nombre y una copia reducida de la foto) que se usan en la página "Armar grupos", de modo que pueda retomarlos después. Las fotos ocupan más que el límite normal de storage.
+- `storage`: Guarda en el almacenamiento local del navegador (chrome.storage.local) los grupos de trabajo que el docente arma en la página "Armar grupos" (nombre de la actividad, integrantes y nota de cada grupo), sus anotaciones para el juicio y los promedios que la página muestra, para que pueda cerrar la pestaña y retomarlos después. También comparte entre esa página y las páginas de SIGED las notas que el docente decide cargar. Nada se envía fuera del navegador.
+- `unlimitedStorage`: La página "Armar grupos" muestra la ficha de cada alumno con una copia reducida de su foto (tomada del Libro del Profesor de SIGED). Con varias libretas de 25 a 35 alumnos esas imágenes superan el límite normal de chrome.storage.local; el permiso evita que se corten las fotos o se pierdan los grupos guardados. Los datos quedan solo en el equipo del docente y se borran al desinstalar la extensión.
+- `identity`: Solo cuando el docente hace clic en "Conectar" con Google Drive: pide a Chrome un token de la cuenta de Google del usuario para guardar en su propio Drive (carpeta "Asistente de SIGED") una copia de los grupos, anotaciones y promedios, con el alcance drive.file (únicamente archivos creados por la extensión). Sin conectar, nunca se usa.
+- `identity.email`: Para mostrarle al docente con qué cuenta de Google quedó conectado Drive. No se envía ni se guarda en otro lado.
 - Permisos de host (`*.siged.com.uy`, `*.siged.com`, `*.siged.edu.uy`): La extensión solo funciona dentro del sistema SIGED; necesita leer la lista de alumnos y completar los campos de notas y comentarios de esas páginas.
 
 **¿Usa código remoto?** No. Todo el código, incluida la librería para leer y generar Excel (SheetJS), va empaquetado en la extensión.
 
-**Uso de datos:** marcar "No recopila ni usa datos de usuario". La extensión no recopila ni transmite datos: los archivos se procesan localmente, las notas solo se escriben en el formulario de SIGED que el usuario tiene abierto y los grupos con las fichas de los alumnos quedan únicamente en el almacenamiento local del navegador (chrome.storage.local), sin salir del equipo.
+**Uso de datos:** marcar "No recopila ni usa datos de usuario" (el desarrollador no recibe nada; la copia en Drive va a la cuenta del propio usuario y solo si él la conecta). La extensión no recopila ni transmite datos: los archivos se procesan localmente, las notas solo se escriben en el formulario de SIGED que el usuario tiene abierto y los grupos con las fichas de los alumnos quedan únicamente en el almacenamiento local del navegador (chrome.storage.local), sin salir del equipo.
 
 **Certificaciones:** marcar las tres (no vende datos, no los usa para fines ajenos a la funcionalidad, no los usa para solvencia crediticia).
 

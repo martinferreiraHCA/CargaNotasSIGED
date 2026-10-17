@@ -60,6 +60,26 @@
         return !!(mapa.estudiante || (mapa.apellido && mapa.nombre));
     }
 
+    // ---------- plantilla con varias tareas ----------
+    // Columnas "Tarea" y "Tarea - Comentario" (una pareja por tarea), generadas desde el Libro del Profesor.
+    const SUFIJO_COMENTARIO = /\s*[-–:]\s*comentarios?$/i;
+    const COLUMNA_NUMERO = /^(n|no|nro|num|numero|orden|#|lista)$/;
+
+    /** Devuelve [{nombre, nota: encabezado, comentario: encabezado|null}] si el archivo es una planilla de tareas */
+    function detectarTareas(headers, mapa) {
+        const usados = new Set(Object.values(mapa));
+        const limpios = headers.map(h => String(h || '').trim());
+        const tareas = [];
+        limpios.forEach(h => {
+            if (!h || usados.has(h) || SUFIJO_COMENTARIO.test(h) || COLUMNA_NUMERO.test(normHeader(h))) return;
+            const com = limpios.find(o => o !== h && SUFIJO_COMENTARIO.test(o) && normHeader(o.replace(SUFIJO_COMENTARIO, '')) === normHeader(h));
+            tareas.push({ nombre: h, nota: h, comentario: com || null });
+        });
+        // Con columna "Nota" clásica solo cuentan las tareas que traen su propio comentario (parejas explícitas)
+        if (mapa.nota) return tareas.filter(t => t.comentario);
+        return tareas;
+    }
+
     // ---------- formatos heredados (equipos) ----------
     function detectarFormatoHeredado(headers) {
         const cols = new Set(headers.map(h => String(h).trim()));
@@ -180,6 +200,16 @@
 
         const datos = { headers, filas, mapa, formato, actividades: [], requiereTipo: false };
 
+        if (formato === 'universal' && !mapa.actividad) {
+            const tareas = detectarTareas(headers, mapa);
+            if (tareas.length) {
+                datos.formato = 'tareas';
+                // Si además hay una columna "Nota" clásica, se ofrece como una tarea más
+                datos.tareas = mapa.nota ? [{ nombre: 'Nota', nota: mapa.nota, comentario: mapa.comentario || null }].concat(tareas) : tareas;
+                datos.actividades = datos.tareas.map(t => t.nombre);
+            }
+        }
+
         if (formato === 'equipos_v1') {
             const set = new Set();
             filas.forEach(r => { if (r['Etapa'] && r['Categoria']) set.add(`Etapa ${r['Etapa']} - ${r['Categoria']}`); });
@@ -192,7 +222,7 @@
             datos.actividades = Array.from(new Set(filas.map(r => r[mapa.actividad]).filter(Boolean))).sort();
         }
 
-        if (formato === 'universal' && !mapa.nota) {
+        if (datos.formato === 'universal' && !mapa.nota) {
             datos.advertencia = 'El archivo tiene nombres de estudiantes pero no se encontró una columna "Nota".';
         }
 
@@ -250,6 +280,11 @@
                 if (opciones.actividad && fila['Grupo'] !== opciones.actividad) return;
                 nota = tipo === 'individual' ? (fila['Nota_Individual'] || '') : (fila['Nota_Equipo'] || '');
                 comentario = tipo === 'individual' ? (fila['Comentario_Individual'] || '') : (fila['Comentario_Equipo'] || '');
+            } else if (datos.formato === 'tareas') {
+                const t = datos.tareas.find(x => x.nombre === opciones.actividad) || (datos.tareas.length === 1 ? datos.tareas[0] : null);
+                if (!t) return;
+                nota = fila[t.nota] || '';
+                comentario = t.comentario ? (fila[t.comentario] || '') : '';
             } else {
                 if (mapa.actividad && opciones.actividad && fila[mapa.actividad] !== opciones.actividad) return;
                 nota = mapa.nota ? (fila[mapa.nota] || '') : '';
@@ -409,6 +444,7 @@
     }
 
     global.SigedFormatos = {
+        detectarTareas,
         normHeader,
         mapearColumnas,
         parseCSV,
