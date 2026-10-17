@@ -18,6 +18,9 @@
         actividades: [],        // [{id, nombre, creada, modificada, grupos: [{id, nombre, nota, comentario, miembros: [], notas: {}}]}]
         actividadId: '',
         elegidos: new Set(), // fichas tocadas para mandarlas a un grupo de un solo clic
+        stats: {},           // alumnoId → estadísticas armadas desde los promedios capturados por el asistente
+        anotaciones: {},     // alumnoId → texto de las anotaciones para el juicio
+        claveDatos: '',      // clave "host|n:nombre" con la que el asistente guarda promedios y anotaciones
         guardado: null
     };
 
@@ -42,6 +45,7 @@
         estado.libreta = estado.libretas['libreta:' + estado.libretaId] || null;
         const res = await A.get('actividades:' + estado.libretaId);
         estado.actividades = res['actividades:' + estado.libretaId] || [];
+        await cargarDatosAlumnos();
         estado.actividades.forEach(a => a.grupos.forEach(g => { g.notas = g.notas || {}; g.miembros = g.miembros || []; }));
         if (!estado.actividadId || !actividad()) {
             estado.actividades.sort((x, y) => (y.modificada || 0) - (x.modificada || 0));
@@ -60,11 +64,236 @@
             try {
                 await A.set({ ['actividades:' + estado.libretaId]: estado.actividades });
                 $('estadoGuardado').textContent = '✓ Guardado en este navegador';
+                pedirSyncDrive();
             } catch (e) {
                 $('estadoGuardado').textContent = '⚠ No se pudo guardar';
                 mensaje('error', 'No se pudo guardar: ' + e.message);
             }
         }, 300);
+    }
+
+    // ---------------------------------------------------------------- datos de los alumnos (promedios, faltas, anotaciones)
+    const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    /** Orden de un período por el primer mes que nombra (los que no nombran meses van al final, por fecha de captura) */
+    function rangoPeriodo(nombre, fecha) {
+        const n = M.normalizeText(nombre || '');
+        let mejor = -1;
+        MESES.forEach((m, i) => { if (n.includes(m) && mejor === -1) mejor = i >= 9 ? i - 1 : i; });
+        return mejor === -1 ? 100 + (fecha || 0) / 1e13 : mejor;
+    }
+    const num = (v) => { if (v === null || v === undefined || v === '') return null; const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
+    const fmt = (n) => (n === null || n === undefined ? '—' : (Math.round(n * 10) / 10).toString().replace('.', ','));
+    function sumaFaltas(c) {
+        if (c.faltas) return ['justificadas', 'injustificadas', 'fictas'].reduce((n, k) => n + (parseInt(c.faltas[k], 10) || 0), 0);
+        if (c.inasistencias) return Object.values(c.inasistencias).reduce((n, v) => n + (parseInt(v, 10) || 0), 0);
+        return null;
+    }
+
+    /** Resume las capturas de un alumno en lo que muestra la carta */
+    function resumirAlumno(registro) {
+        const periodos = Object.keys(registro.periodos || {}).map(k => Object.assign({ nombre: k }, registro.periodos[k]));
+        periodos.sort((a, b) => rangoPeriodo(a.nombre, a.fecha) - rangoPeriodo(b.nombre, b.fecha));
+        const generales = periodos.filter(p => p.materias);           // corrector / cierre: promedio general del alumno
+        const materia = periodos.filter(p => p.columnas);             // orales/escritos: rendimiento en esta materia
+        const g = generales.length ? generales[generales.length - 1] : null;
+        const m = materia.filter(p => num(p.promedio) !== null);
+        const mu = m.length ? m[m.length - 1] : null;
+        const mp = m.length > 1 ? m[m.length - 2] : null;
+        const faltasDe = (lista) => { for (let i = lista.length - 1; i >= 0; i--) { const f = sumaFaltas(lista[i]); if (f !== null) return f; } return null; };
+        const r = {
+            general: g ? num(g.promedio) : null,
+            generalAnterior: g ? num(g.promedioAnterior) : null,
+            periodoGeneral: g ? g.nombre : '',
+            subieron: g && g.materias ? g.materias.subieron.length : null,
+            bajaron: g && g.materias ? g.materias.bajaron.length : null,
+            bajas: g ? (g.bajas === undefined ? null : g.bajas) : null,
+            materia: mu ? num(mu.promedio) : null,
+            materiaAnterior: mp ? num(mp.promedio) : null,
+            periodoMateria: mu ? mu.nombre : '',
+            faltas: faltasDe(generales.length ? generales : materia),
+            periodos
+        };
+        r.valor = r.general !== null ? r.general : r.materia;
+        return r;
+    }
+
+    async function cargarDatosAlumnos() {
+        estado.stats = {}; estado.anotaciones = {}; estado.claveDatos = '';
+        if (!estado.libreta || !estado.libreta.alumnos.length) return;
+        const objetivo = M.normalizeText(estado.libreta.nombre || '');
+        const host = estado.libreta.host || (estado.libretaId.split('|')[0]);
+        estado.claveDatos = `${host}|n:${objetivo}`;
+        const [promedios, anotaciones] = await Promise.all([A.listar('promedios:'), A.listar('anotaciones:')]);
+        const elegir = (todo) => {
+            const claves = Object.keys(todo).filter(k => M.normalizeText(k.replace(/^.*\|n:/, '')) === objetivo);
+            const conHost = claves.find(k => k.startsWith(estado.claveDatos.split('|n:')[0] + '|'));
+            return conHost || claves[0] || '';
+        };
+        const filas = estado.libreta.alumnos.map(a => ({ id: a.id, tok: M.tokens(a.nombre) }));
+        const kp = elegir(promedios);
+        if (kp) {
+            const regs = Object.keys(promedios[kp].alumnos || {}).map(id => ({ id, tok: M.tokens(promedios[kp].alumnos[id].nombre || id) }));
+            M.asignarUnico(filas, regs, 0.7).forEach((as, i) => { if (as) estado.stats[filas[i].id] = resumirAlumno(promedios[kp].alumnos[as.entrada.id]); });
+        }
+        const ka = elegir(anotaciones);
+        if (ka) {
+            const regs = Object.keys(anotaciones[ka].alumnos || {}).map(id => ({ id, tok: M.tokens(anotaciones[ka].alumnos[id].nombre || id) }));
+            M.asignarUnico(filas, regs, 0.7).forEach((as, i) => {
+                if (!as) return;
+                const rec = anotaciones[ka].alumnos[as.entrada.id];
+                const t = Array.isArray(rec.entradas) && rec.entradas.length ? rec.entradas.map(e => [(e.etiquetas || []).join(', '), String(e.texto || '').trim()].filter(Boolean).join(': ')).join('. ').replace(/\.\./g, '.') : (rec.texto || '');
+                if (t) estado.anotaciones[filas[i].id] = t;
+            });
+        }
+    }
+
+    const claseRating = (v) => (v === null ? '' : v >= 8 ? 'alto' : v >= 6 ? 'medio' : 'bajo');
+    const flecha = (ahora, antes) => (ahora === null || antes === null ? '' : ahora > antes ? '<span class="sube">▲</span>' : ahora < antes ? '<span class="baja">▼</span>' : '<span class="igual">=</span>');
+
+    function promedioGrupo(g) {
+        const vals = g.miembros.map(id => estado.stats[id] && estado.stats[id].valor).filter(v => v !== null && v !== undefined);
+        return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    }
+
+    function abrirDetalle(id) {
+        const a = estado.libreta.alumnos.find(x => x.id === id); if (!a) return;
+        const st = estado.stats[id];
+        const anot = estado.anotaciones[id];
+        let html = `<div class="fd-cab">${a.foto ? `<img src="${escapeHtml(a.foto)}" alt="">` : `<div class="inicial">${escapeHtml((a.apellido || a.nombre).charAt(0))}</div>`}
+            <div><h3>${escapeHtml(a.nombre)}</h3>${st && st.valor !== null ? `<span class="rating ${claseRating(st.valor)}">${fmt(st.valor)}</span> <span class="fd-sin">${st.general !== null ? 'promedio general · ' + escapeHtml(st.periodoGeneral) : 'esta materia · ' + escapeHtml(st.periodoMateria)}</span>` : '<span class="fd-sin">Sin datos todavía</span>'}</div></div>`;
+        if (!st) {
+            html += `<p class="fd-sin">El asistente guarda solo los promedios cuando ves <b>Orales, Escritos y O. Act.</b> (con TODOS), la ficha del <b>Cierre de promedios</b> o el <b>Corrector por curso</b> en SIGED. Abrí alguna de esas páginas y volvé.</p>`;
+        } else {
+            html += `<div class="fd-kpis">
+                <div class="fd-kpi ${st.subieron ? 'verde' : ''}"><div class="v">${st.subieron === null ? '—' : '▲ ' + st.subieron}</div><div class="e">materias subieron</div></div>
+                <div class="fd-kpi ${st.bajaron ? 'rojo' : ''}"><div class="v">${st.bajaron === null ? '—' : '▼ ' + st.bajaron}</div><div class="e">bajaron</div></div>
+                <div class="fd-kpi ${st.bajas ? 'rojo' : 'verde'}"><div class="v">${st.bajas === null ? '—' : st.bajas}</div><div class="e">bajas</div></div>
+                <div class="fd-kpi ${st.faltas ? '' : 'verde'}"><div class="v">${st.faltas === null ? '—' : st.faltas}</div><div class="e">faltas</div></div>
+                <div class="fd-kpi"><div class="v">${fmt(st.materia)} ${flecha(st.materia, st.materiaAnterior)}</div><div class="e">esta materia</div></div>
+            </div>`;
+            const g = st.periodos.filter(p => p.materias).slice(-1)[0];
+            if (g && g.materias) {
+                const chips = (lista, clase) => lista.map(n => `<span class="fd-chip ${clase}">${escapeHtml(n)}</span>`).join('');
+                if (g.materias.bajas.length) html += `<div class="fd-sec">Bajas en</div><div class="fd-chips">${chips(g.materias.bajas, 'roja')}</div>`;
+                if (g.materias.subieron.length) html += `<div class="fd-sec">Subió en${g.comparadoCon ? ' (vs. ' + escapeHtml(g.comparadoCon) + ')' : ''}</div><div class="fd-chips">${chips(g.materias.subieron, 'sube')}</div>`;
+                if (g.materias.bajaron.length) html += `<div class="fd-sec">Bajó en</div><div class="fd-chips">${chips(g.materias.bajaron, 'baja')}</div>`;
+                if (g.notas && g.notas.length) html += `<div class="fd-sec">Notas por materia · ${escapeHtml(g.nombre)}</div><div class="fd-chips">${g.notas.map(([n, v]) => `<span class="fd-chip">${escapeHtml(n)} <b>${escapeHtml(v)}</b></span>`).join('')}</div>`;
+            }
+            const filas = st.periodos.map(p => {
+                const cols = p.columnas ? Object.entries(p.columnas).filter(([, v]) => v !== '').map(([k, v]) => `${k} ${v}`).join(' · ') : '';
+                return `<tr><td>${escapeHtml(p.nombre)}</td><td><b>${escapeHtml(p.promedio || '—')}</b></td><td>${sumaFaltas(p) === null ? '—' : sumaFaltas(p)}</td><td>${escapeHtml(cols || (p.materias ? 'promedio general' : ''))}</td></tr>`;
+            }).join('');
+            html += `<div class="fd-sec">Períodos</div><table class="fd-tabla"><tr><th>Período</th><th>Prom.</th><th>Faltas</th><th>Detalle</th></tr>${filas}</table>`;
+        }
+        html += `<div class="fd-sec">Anotaciones para el juicio</div>` + (anot ? `<div class="fd-anot">${escapeHtml(anot)}</div>` : '<div class="fd-sin">Sin anotaciones. Podés agregarlas con el botón de abajo.</div>');
+        $('fichaDetalle').innerHTML = html;
+        $('dialogoFicha').showModal();
+    }
+    $('fichaCerrar').addEventListener('click', () => $('dialogoFicha').close());
+    $('btnAnotaciones').addEventListener('click', () => {
+        $('dialogoFicha').close();
+        const url = 'anotaciones.html' + (estado.claveDatos ? '?libreta=' + encodeURIComponent(estado.claveDatos) : '');
+        window.open(url, '_blank');
+    });
+
+    // ---------------------------------------------------------------- Google Drive
+    const tieneRuntime = () => { try { return !!(window.chrome && chrome.runtime && chrome.runtime.sendMessage); } catch (e) { return false; } };
+    function mensajeDrive(op, extra) {
+        return new Promise((resolve, reject) => {
+            if (!tieneRuntime()) return reject(new Error('Solo disponible dentro de la extensión.'));
+            try {
+                chrome.runtime.sendMessage(Object.assign({ action: 'drive', op }, extra || {}), (resp) => {
+                    const err = chrome.runtime.lastError;
+                    if (err) return reject(new Error(err.message));
+                    if (!resp || !resp.ok) return reject(new Error(resp && resp.error ? resp.error : 'Sin respuesta'));
+                    resolve(resp.datos);
+                });
+            } catch (e) { reject(e); }
+        });
+    }
+    function pedirSyncDrive() { if (tieneRuntime()) mensajeDrive('sincronizar', { silencioso: true }).catch(() => {}); }
+
+    function pintarDrive(est) {
+        const cont = $('drive');
+        if (!cont) return;
+        if (!tieneRuntime()) { cont.style.display = 'none'; return; }
+        const conectado = !!(est && est.conectado);
+        cont.classList.toggle('ok', conectado && !(est && est.error));
+        cont.classList.toggle('error', !!(est && est.error));
+        const cuando = est && est.ultimaSync ? ' · ' + hace(est.ultimaSync) : '';
+        $('driveTexto').textContent = conectado
+            ? `☁ Drive: ${est.email || 'conectado'}${cuando}`
+            : (est && est.configurado === false ? '☁ Drive (falta configurar)' : '☁ Google Drive');
+        $('driveTexto').title = est && est.error ? est.error : (conectado ? 'Copia en Google Drive → Asistente de SIGED / ' + (est.anio || '') : 'Guardá una copia en tu Google Drive para retomar desde cualquier computadora');
+        $('btnDriveConectar').style.display = conectado ? 'none' : '';
+        $('btnDriveSync').style.display = conectado ? '' : 'none';
+        $('btnDriveDesconectar').style.display = conectado ? '' : 'none';
+        $('driveAnio').style.display = conectado ? '' : 'none';
+    }
+    function hace(ts) {
+        const min = Math.round((Date.now() - ts) / 60000);
+        if (min < 1) return 'recién'; if (min < 60) return `hace ${min} min`;
+        const h = Math.round(min / 60); if (h < 24) return `hace ${h} h`;
+        return `hace ${Math.round(h / 24)} día(s)`;
+    }
+    async function refrescarDrive() {
+        try { pintarDrive(await mensajeDrive('estado')); } catch (e) { pintarDrive(null); }
+    }
+    async function conectarDrive() {
+        $('btnDriveConectar').disabled = true; $('driveTexto').textContent = '☁ Conectando…';
+        try {
+            const est = await mensajeDrive('conectar');
+            pintarDrive(est);
+            const r = est.ultimoResumen || {};
+            mensaje('ok', `☁ Conectado a Google Drive${est.email ? ' como ' + est.email : ''}. Carpeta "Asistente de SIGED / ${est.anio}": ${(r.subidos || []).length} subido(s), ${(r.bajados || []).length} traído(s).`);
+            if ((r.bajados || []).length) cargar();
+            cargarAniosDrive();
+        } catch (e) {
+            mensaje('error', 'No se pudo conectar con Google: ' + e.message);
+            refrescarDrive();
+        }
+        $('btnDriveConectar').disabled = false;
+    }
+    async function sincronizarDriveAhora() {
+        $('btnDriveSync').disabled = true; $('driveTexto').textContent = '☁ Sincronizando…';
+        try {
+            const est = await mensajeDrive('sincronizar');
+            pintarDrive(est);
+            const r = est.ultimoResumen || {};
+            mensaje('ok', `☁ Sincronizado: ${(r.subidos || []).length} subido(s), ${(r.bajados || []).length} traído(s)${(r.errores || []).length ? ' · ' + r.errores.length + ' error(es)' : ''}.`);
+            if ((r.bajados || []).length) cargar();
+        } catch (e) { mensaje('error', 'No se pudo sincronizar: ' + e.message); refrescarDrive(); }
+        $('btnDriveSync').disabled = false;
+    }
+    async function desconectarDrive() {
+        if (!confirm('¿Dejar de usar Google Drive? Lo guardado en Drive no se borra; solo se corta la conexión en este navegador.')) return;
+        try { pintarDrive(await mensajeDrive('desconectar')); mensaje('info', 'Google Drive desconectado.'); } catch (e) { mensaje('error', e.message); }
+    }
+    async function cargarAniosDrive() {
+        try {
+            const anios = await mensajeDrive('anios');
+            const sel = $('driveAnio');
+            sel.innerHTML = '<option value="">Retomar año…</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
+        } catch (e) { /* sin conexión */ }
+    }
+    async function restaurarDrive(anio) {
+        if (!anio) return;
+        if (!confirm(`¿Traer a este navegador todo lo guardado en Drive del año ${anio}? Lo que ya tengas con el mismo nombre se reemplaza por la copia de Drive.`)) return;
+        try {
+            const r = await mensajeDrive('restaurar', { anio });
+            mensaje('ok', `☁ Se trajeron ${r.bajados.length} elemento(s) del año ${anio}.`);
+            cargar(); refrescarDrive();
+        } catch (e) { mensaje('error', 'No se pudo restaurar: ' + e.message); }
+    }
+    if (tieneRuntime()) {
+        $('btnDriveConectar').addEventListener('click', conectarDrive);
+        $('btnDriveSync').addEventListener('click', sincronizarDriveAhora);
+        $('btnDriveDesconectar').addEventListener('click', desconectarDrive);
+        $('driveAnio').addEventListener('change', (ev) => { const v = ev.target.value; ev.target.value = ''; restaurarDrive(v); });
+        try { chrome.runtime.onMessage.addListener((req) => { if (req && req.action === 'driveActualizado') { cargar(); refrescarDrive(); } }); } catch (e) { /* ignorar */ }
+        refrescarDrive().then(() => mensajeDrive('estado').then(est => { if (est.conectado) cargarAniosDrive(); }).catch(() => {}));
+    } else {
+        pintarDrive(null);
     }
 
     // ---------------------------------------------------------------- actividades
@@ -128,22 +357,38 @@
         return estado.libreta.alumnos.filter(a => !enGrupo.has(a.id));
     }
 
-    function repartir(porCantidad, n, azar) {
+    /** modo: 'azar' | 'lista' | 'equilibrado' (serpentina por promedio: el mejor con el peor, etc.) */
+    function repartir(porCantidad, n, modo) {
         const act = actividad(); if (!act || !estado.libreta) return;
+        if (modo === true) modo = 'azar'; else if (modo === false) modo = 'lista';
         const total = estado.libreta.alumnos.length;
         if (!n || n < 1) return;
         const cantidad = porCantidad ? Math.min(n, total) : Math.ceil(total / n);
         if (act.grupos.some(g => g.miembros.length || g.nota) && !confirm('Esto rearma todos los grupos de esta actividad. ¿Seguimos?')) return;
         let alumnos = estado.libreta.alumnos.slice();
-        if (azar) {
-            for (let i = alumnos.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [alumnos[i], alumnos[j]] = [alumnos[j], alumnos[i]]; }
+        const mezclar = (lista) => { for (let i = lista.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [lista[i], lista[j]] = [lista[j], lista[i]]; } return lista; };
+        let sinDatos = 0;
+        if (modo === 'azar') mezclar(alumnos);
+        if (modo === 'equilibrado') {
+            const valor = (a) => (estado.stats[a.id] && estado.stats[a.id].valor !== null ? estado.stats[a.id].valor : null);
+            const con = alumnos.filter(a => valor(a) !== null).sort((a, b) => valor(b) - valor(a));
+            const sin = mezclar(alumnos.filter(a => valor(a) === null));
+            sinDatos = sin.length;
+            if (!con.length) { mensaje('aviso', 'No hay promedios guardados de esta libreta: abrí en SIGED "Orales, Escritos y O. Act." (TODOS), el Cierre o el Corrector para que el asistente los capture. Mientras tanto se reparte al azar.'); mezclar(alumnos); }
+            else alumnos = con.concat(sin);
         }
         const grupos = [];
         for (let i = 0; i < cantidad; i++) grupos.push({ id: nuevoId(), nombre: 'Grupo ' + (i + 1), nota: '', comentario: '', miembros: [], notas: {} });
-        alumnos.forEach((a, i) => grupos[i % cantidad].miembros.push(a.id));
+        alumnos.forEach((a, i) => {
+            // serpentina: 0,1,2,…,n-1,n-1,…,1,0 para que cada grupo reciba alternadamente a los mejores y a los que van más flojos
+            const vuelta = Math.floor(i / cantidad), pos = i % cantidad;
+            const destino = modo === 'equilibrado' && vuelta % 2 === 1 ? cantidad - 1 - pos : pos;
+            grupos[destino].miembros.push(a.id);
+        });
         act.grupos = grupos;
         guardar(); render();
-        mensaje('ok', `${total} alumnos repartidos en ${cantidad} grupos${azar ? ' al azar' : ' en orden de lista'}.`);
+        const como = modo === 'azar' ? ' al azar' : modo === 'equilibrado' ? ' equilibrados por promedio' + (sinDatos ? ` (${sinDatos} sin datos, al final)` : '') : ' en orden de lista';
+        mensaje('ok', `${total} alumnos repartidos en ${cantidad} grupos${como}.`);
     }
 
     function agregarGrupo() {
@@ -261,13 +506,28 @@
     function fichaHtml(a, g) {
         const foto = a.foto ? `<img src="${escapeHtml(a.foto)}" alt="" draggable="false">` : `<div class="inicial">${escapeHtml((a.apellido || a.nombre || '?').charAt(0))}</div>`;
         const act = actividad();
+        const st = estado.stats[a.id];
         const opciones = ['<option value="">→</option>', '<option value="_sin">Sin grupo</option>']
-            .concat(act.grupos.map(x => `<option value="${x.id}" ${g && x.id === g.id ? 'disabled' : ''}>${escapeHtml(x.nombre)}</option>`)).join('');
-        return `<div class="ficha${estado.elegidos.has(a.id) ? ' elegida' : ''}" draggable="true" data-id="${escapeHtml(a.id)}" title="${escapeHtml(a.nombre)}">
-            ${foto}
-            <div class="nombre"><b>${escapeHtml(a.apellido || '')}</b>${escapeHtml(a.nombrePila || '')}</div>
-            ${g ? `<input class="nota-ind" data-grupo="${g.id}" data-alumno="${escapeHtml(a.id)}" value="${escapeHtml(g.notas[a.id] || '')}" placeholder="${escapeHtml(g.nota || '—')}" title="Nota de este integrante (si es distinta a la del grupo)">` : ''}
-            <select class="mover" data-alumno="${escapeHtml(a.id)}" title="Mover a…">${opciones}</select>
+            .concat(act ? act.grupos.map(x => `<option value="${x.id}" ${g && x.id === g.id ? 'disabled' : ''}>${escapeHtml(x.nombre)}</option>`) : []).join('');
+        const rating = st && st.valor !== null
+            ? `<div class="rating ${claseRating(st.valor)}" title="${st.general !== null ? 'Promedio general · ' + escapeHtml(st.periodoGeneral) : 'Esta materia · ' + escapeHtml(st.periodoMateria)}">${fmt(st.valor)}<small>${st.general !== null ? 'PROM' : 'MAT'}</small></div>`
+            : `<div class="rating" title="Sin datos: el asistente los guarda cuando ves promedios en SIGED">—<small>PROM</small></div>`;
+        let stats;
+        if (!st) stats = `<span class="sin">sin datos aún</span>`;
+        else {
+            const tend = st.subieron === null ? (st.materia !== null && st.materiaAnterior !== null ? `${flecha(st.materia, st.materiaAnterior)} mat.` : '<span class="igual">—</span>')
+                : `<span class="sube">▲${st.subieron}</span> <span class="baja">▼${st.bajaron}</span>`;
+            stats = `<span title="Materias que subieron / bajaron respecto del período anterior">${tend}</span>` +
+                (st.general !== null && st.materia !== null ? `<span title="Esta materia (${escapeHtml(st.periodoMateria)})">📘<b>${fmt(st.materia)}</b>${flecha(st.materia, st.materiaAnterior)}</span>` : '') +
+                `<span title="Faltas">🚫<b>${st.faltas === null ? '—' : st.faltas}</b></span>`;
+        }
+        return `<div class="ficha${estado.elegidos.has(a.id) ? ' elegida' : ''}" draggable="true" data-id="${escapeHtml(a.id)}" title="${escapeHtml(a.nombre)}${estado.anotaciones[a.id] ? ' · 📝 ' + escapeHtml(estado.anotaciones[a.id].slice(0, 120)) : ''}">
+            <button class="info" data-info="${escapeHtml(a.id)}" title="Ver la ficha completa del alumno">i</button>
+            <div class="carta-top">${rating}${foto}</div>
+            <div class="nombre"><b>${escapeHtml(a.apellido || '')}</b><span>${escapeHtml(a.nombrePila || '')}${estado.anotaciones[a.id] ? ' 📝' : ''}</span></div>
+            <div class="stats">${stats}</div>
+            <div class="pie">${g ? `<input class="nota-ind" data-grupo="${g.id}" data-alumno="${escapeHtml(a.id)}" value="${escapeHtml(g.notas[a.id] || '')}" placeholder="${escapeHtml(g.nota || 'nota')}" title="Nota de este integrante (si es distinta a la del grupo)">` : ''}
+            <select class="mover" data-alumno="${escapeHtml(a.id)}" title="Mover a…">${opciones}</select></div>
         </div>`;
     }
 
@@ -284,13 +544,13 @@
             ? estado.actividades.map(a => `<option value="${a.id}" ${a.id === estado.actividadId ? 'selected' : ''}>${escapeHtml(a.nombre)} (${a.grupos.length} grupos)</option>`).join('')
             : '<option value="">— creá una actividad —</option>';
         const act = actividad();
-        ['btnRenombrar', 'btnDuplicar', 'btnBorrar', 'btnAzar', 'btnLista', 'btnAgregarGrupo', 'btnVaciar', 'btnEnviar', 'btnExcel', 'btnImprimir'].forEach(id => { $(id).disabled = !act; });
+        ['btnRenombrar', 'btnDuplicar', 'btnBorrar', 'btnAzar', 'btnLista', 'btnEquilibrado', 'btnAgregarGrupo', 'btnVaciar', 'btnEnviar', 'btnExcel', 'btnImprimir'].forEach(id => { $(id).disabled = !act; });
         $('btnNuevaActividad').disabled = !estado.libreta;
 
         const cont = $('grupos');
         const sin = $('fichasSinGrupo');
         if (!act || !estado.libreta) {
-            sin.innerHTML = estado.libreta ? estado.libreta.alumnos.map(a => `<div class="ficha" title="${escapeHtml(a.nombre)}">${a.foto ? `<img src="${escapeHtml(a.foto)}" alt="">` : `<div class="inicial">${escapeHtml((a.apellido || '?').charAt(0))}</div>`}<div class="nombre"><b>${escapeHtml(a.apellido || '')}</b>${escapeHtml(a.nombrePila || '')}</div></div>`).join('') : '';
+            sin.innerHTML = estado.libreta ? estado.libreta.alumnos.map(a => fichaHtml(a, null)).join('') : '';
             $('cantSinGrupo').textContent = estado.libreta ? estado.libreta.alumnos.length : 0;
             cont.innerHTML = `<div class="vacio" style="grid-column:1/-1;padding:30px">${estado.libreta ? 'Creá una actividad con "＋ Nueva" para empezar a armar grupos.' : 'Todavía no hay alumnos guardados.'}</div>`;
             return;
@@ -304,6 +564,7 @@
                 <div class="cab">
                     <input class="nombre-grupo" data-grupo="${g.id}" value="${escapeHtml(g.nombre)}" maxlength="40" title="Nombre del grupo">
                     <span class="cant">${miembros.length} integr.</span>
+                    <span class="prom ${promedioGrupo(g) === null ? 'sin' : ''}" title="Promedio de los integrantes con datos">${promedioGrupo(g) === null ? '' : 'prom. ' + fmt(promedioGrupo(g))}</span>
                     <input class="nota-grupo" data-grupo="${g.id}" value="${escapeHtml(g.nota || '')}" placeholder="Nota" title="Nota del grupo (se asigna a todos sus integrantes)">
                     <button class="quitar" data-grupo="${g.id}" title="Quitar grupo">✕</button>
                 </div>
@@ -371,6 +632,8 @@
     document.addEventListener('click', (ev) => {
         const q = ev.target.closest && ev.target.closest('button.quitar');
         if (q) { quitarGrupo(q.dataset.grupo); return; }
+        const inf = ev.target.closest && ev.target.closest('button.info');
+        if (inf) { abrirDetalle(inf.dataset.info); return; }
         if (ev.target.closest('input, select, textarea, button, a')) return;
         const act = actividad(); if (!act) return;
         const f = ev.target.closest('.ficha[data-id]');
@@ -395,14 +658,15 @@
     $('tamGrupo').addEventListener('input', () => { $('tamGrupo').dataset.usado = '1'; $('cantGrupos').dataset.usado = ''; });
     // Qué criterio usar al repartir: el último campo que el docente tocó (por defecto, cantidad de grupos)
     const criterio = () => ($('tamGrupo').dataset.usado === '1' ? { porCantidad: false, n: +$('tamGrupo').value } : { porCantidad: true, n: +$('cantGrupos').value });
-    $('btnAzar').onclick = () => { const c = criterio(); repartir(c.porCantidad, c.n, true); };
-    $('btnLista').onclick = () => { const c = criterio(); repartir(c.porCantidad, c.n, false); };
+    $('btnAzar').onclick = () => { const c = criterio(); repartir(c.porCantidad, c.n, 'azar'); };
+    $('btnLista').onclick = () => { const c = criterio(); repartir(c.porCantidad, c.n, 'lista'); };
+    $('btnEquilibrado').onclick = () => { const c = criterio(); repartir(c.porCantidad, c.n, 'equilibrado'); };
     $('btnAgregarGrupo').addEventListener('click', agregarGrupo);
     $('btnVaciar').addEventListener('click', vaciarGrupos);
     $('btnEnviar').addEventListener('click', enviarNotas);
     $('btnExcel').addEventListener('click', exportarExcel);
     $('btnImprimir').addEventListener('click', imprimir);
 
-    window.GruposApp = { estado, cargar, repartir, mover, entradasDeNotas, actividad };
+    window.GruposApp = { estado, cargar, repartir, mover, entradasDeNotas, actividad, resumirAlumno, cargarDatosAlumnos };
     cargar();
 })();

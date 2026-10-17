@@ -373,10 +373,23 @@
                 return filas;
             },
             columnasExport() {
-                return ['N°', 'Estudiante', 'Nota', 'Comentario'];
+                const pl = estado.plantilla || { cantidad: 1, nombres: [], comentario: true };
+                const cantidad = Math.max(1, Math.min(30, parseInt(pl.cantidad, 10) || 1));
+                const cols = ['N°', 'Estudiante'];
+                if (cantidad === 1 && !(pl.nombres[0] || '').trim()) {
+                    cols.push('Nota');
+                    if (pl.comentario !== false) cols.push('Comentario');
+                    return cols;
+                }
+                for (let i = 0; i < cantidad; i++) {
+                    const n = String(pl.nombres[i] || '').trim() || `Tarea ${i + 1}`;
+                    cols.push(n);
+                    if (pl.comentario !== false) cols.push(n + ' - Comentario');
+                }
+                return cols;
             },
-            filaExport(f, i) {
-                return [i + 1, f.nombre, '', ''];
+            filaExport(f, i, cols) {
+                return [i + 1, f.nombre].concat(cols.slice(2).map(() => ''));
             },
             campos: { comentario: 'Comentario' },
             aplicar: null // en esta página no se cargan notas
@@ -488,6 +501,9 @@
         actividadSel: '',     // página de detalle: evaluación elegida para copiar (clave tipo|fecha)
         comparacionSel: '',   // corrector / cierre: evaluación anterior con la que se compara ('' = automática)
         modoCierre: 'ficha',  // cierre: 'ficha' (ver info del alumno) o 'exportar' (recorrer / Excel)
+        plantilla: null,      // libro: diálogo de la plantilla {cantidad, nombres: [], comentario}
+        anotMap: [],          // anotaciones: por fila de la página, {id, rec} o null
+        promediosLibro: undefined, // libro: resumen de los promedios guardados de la libreta
         colapsado: false
     };
 
@@ -504,6 +520,7 @@
         estado.firmaFilas = pagina && pagina.firma ? pagina.firma(estado.filas) : estado.filas.map(f => f.nombre).join('|');
         const cambiaronAlumnos = firmaAntes !== estado.firmaFilas;
         if (cambioPagina || cambiaronAlumnos) {
+            if (claveLibreta() !== anot.clave) { estado.promediosLibro = undefined; estado.anotTodos = false; estado.anotExtra = ''; }
             estado.resultado = null;
             if (cambioPagina || (estado.mensaje && estado.mensaje.tipo === 'info')) estado.mensaje = null;
             if (estado.archivo) recalcularAsignacion();
@@ -648,6 +665,10 @@
                 '(Evaluaciones o Pasaje de calificaciones al boletín) y usá el botón "Importar notas desde archivo".'],
             ['Notas válidas', 'Números enteros según la escala de la evaluación (por ejemplo 1 a 10). Si ponés decimales se redondean.']
         ];
+        if (pagina.clave === 'libro' && cols.length > 4) {
+            info[8] = ['Cómo usar esta planilla', 'Cada tarea tiene su columna de nota y, al lado, su columna de comentario. Completá las que quieras. ' +
+                'Luego entrá en SIGED a la evaluación donde van esas notas y usá "Importar notas desde archivo": el asistente te pregunta qué tarea de la planilla cargar.'];
+        }
         const nombreBase = [
             pagina.clave === 'libro' ? 'Plantilla' : 'Notas',
             ctx.libreta,
@@ -661,9 +682,10 @@
                 info,
                 nombreBase,
                 formato,
-                anchos: cols.map(c => (c === 'Estudiante' ? 38 : (c === 'Comentario' || c === 'Juicio') ? 60 : 12))
+                anchos: cols.map(c => (c === 'Estudiante' ? 38 : (c === 'Comentario' || c === 'Juicio') ? 60 : /comentario$/i.test(c) ? 40 : 14))
             });
             estado.mensaje = { tipo: 'ok', texto: `Archivo descargado: ${nombre}` };
+            estado.plantilla = null;
         } catch (err) {
             console.error('❌ Error exportando:', err);
             estado.mensaje = { tipo: 'error', texto: 'No se pudo generar el archivo: ' + err.message };
@@ -1080,6 +1102,250 @@
         }
     }
 
+    // =====================================================================
+    //  Clave de la libreta actual (común a todas las páginas) e identidad de alumnos
+    // =====================================================================
+    function claveLibreta() {
+        const n = estado.contexto.libreta || '';
+        return n ? `${location.host}|n:${M.normalizeText(n)}` : '';
+    }
+    const idAlumno = (nombre) => M.tokens(nombre).join(' ');
+    const nombreFila = (f) => f.nombre || `${f.apellidos || ''} ${f.nombres || ''}`.trim();
+
+    /** Pide al service worker que sincronice con Google Drive (no hace nada si no está conectado) */
+    function pedirSync() {
+        try { chrome.runtime.sendMessage({ action: 'drive', op: 'sincronizar', silencioso: true }, () => void chrome.runtime.lastError); } catch (e) { /* sin extensión */ }
+    }
+
+    // =====================================================================
+    //  Anotaciones para el próximo juicio: texto libre por alumno y libreta,
+    //  guardado en el navegador (y en Drive si está conectado). Se muestran
+    //  en todas las páginas de la libreta y se pueden pegar en el juicio.
+    // =====================================================================
+    const CLAVE_ANOT_ON = 'sigedCargaNotas.anotacionesActivas';
+    const anot = { clave: '', datos: null };
+    const anotacionesActivas = () => { try { return localStorage.getItem(CLAVE_ANOT_ON) === '1'; } catch (e) { return false; } };
+
+    function cargarAnotaciones() {
+        if (!A) return;
+        const clave = claveLibreta();
+        if (!clave || anot.clave === clave) return;
+        anot.clave = clave; anot.datos = null;
+        A.get('anotaciones:' + clave).then(res => {
+            if (anot.clave !== clave) return;
+            anot.datos = res['anotaciones:' + clave] || { libreta: estado.contexto.libreta, modificado: 0, alumnos: {} };
+            render();
+        }).catch(() => {});
+    }
+
+    /** Por cada fila de la página, {id, rec} de la anotación guardada (matching tolerante de nombres) o null */
+    function anotacionesDeFilas(filas) {
+        if (!anot.datos) return filas.map(() => null);
+        const ids = Object.keys(anot.datos.alumnos);
+        const entradas = ids.map(id => ({ id, tok: M.tokens(anot.datos.alumnos[id].nombre || id) }));
+        const filasTok = filas.map(f => ({ tok: f.tok || M.tokens(nombreFila(f)) }));
+        const asig = M.asignarUnico(filasTok, entradas, UMBRAL_MATCH);
+        return asig.map(a => (a ? { id: a.entrada.id, rec: anot.datos.alumnos[a.entrada.id] } : null));
+    }
+
+    function pegarAnotacion(i) {
+        const fila = estado.anotFilas[i];
+        const m = estado.anotMap[i];
+        const texto = m ? textoAnotacion(m.rec) : '';
+        if (!fila || !texto) return;
+        if (!fila.textarea || !esVisible(fila.textarea)) {
+            estado.mensaje = { tipo: 'aviso', texto: 'En esta fila no hay un campo de juicio visible donde pegar la anotación.' };
+            render();
+            return;
+        }
+        const actual = String(fila.textarea.value || '').trim();
+        const r = escribirTexto(fila.textarea, actual ? actual + ' ' + texto : texto);
+        if (fila.tr) pintarFila(fila.tr, '#fff8e1');
+        estado.mensaje = r.ok
+            ? { tipo: 'ok', texto: `Anotación pegada en el juicio de ${nombreFila(fila)}. Revisá y hacé clic en Guardar en SIGED.` }
+            : { tipo: 'error', texto: 'No se pudo escribir el juicio: ' + r.motivo };
+        render();
+    }
+
+    /** Lista de alumnos de la página para que la página de anotaciones los muestre aunque no haya libreta guardada */
+    function listaAlumnosPagina() {
+        return estado.filas.map(f => nombreFila(f)).filter(Boolean);
+    }
+
+    function abrirAnotaciones() {
+        const clave = claveLibreta();
+        if (!A || !clave) return;
+        const continuar = (datos) => {
+            datos = datos || { libreta: estado.contexto.libreta, modificado: 0, alumnos: {} };
+            const lista = listaAlumnosPagina();
+            if (lista.length) datos.lista = lista;
+            datos.libreta = estado.contexto.libreta || datos.libreta;
+            return A.set({ ['anotaciones:' + clave]: datos }).then(() => {
+                anot.clave = ''; // se vuelve a leer al volver
+                try {
+                    chrome.runtime.sendMessage({ action: 'abrirPagina', pagina: 'anotaciones.html', query: { libreta: clave } }, (resp) => {
+                        if (chrome.runtime.lastError || !resp || !resp.ok) { estado.mensaje = { tipo: 'aviso', texto: 'No se pudo abrir la pestaña. Hacé clic en el ícono de la extensión y elegí "Anotaciones".' }; render(); }
+                    });
+                } catch (e) { estado.mensaje = { tipo: 'aviso', texto: 'Las anotaciones se abren desde la extensión instalada en Chrome.' }; render(); }
+            });
+        };
+        A.get('anotaciones:' + clave).then(res => continuar(res['anotaciones:' + clave])).catch(() => continuar(null));
+    }
+
+    /** Texto para el juicio: el que compila la página de anotaciones (etiquetas + texto de cada entrada) */
+    const textoAnotacion = (rec) => {
+        if (!rec) return '';
+        if (String(rec.texto || '').trim()) return String(rec.texto).trim();
+        if (Array.isArray(rec.entradas) && rec.entradas.length) {
+            return rec.entradas.map(e => [(e.etiquetas || []).join(', '), String(e.texto || '').trim()].filter(Boolean).join(': ')).filter(Boolean).join('. ').replace(/\.\./g, '.');
+        }
+        return '';
+    };
+
+    /**
+     * Tarjeta del panel: solo un acceso a la página de anotaciones. En el boletín, además,
+     * los recordatorios (nombre + texto) de los alumnos anotados, con "al juicio" (se pueden ocultar).
+     */
+    function renderAnotaciones(filas, opciones) {
+        opciones = opciones || {};
+        if (!A || !filas || !filas.length || !claveLibreta()) return '';
+        cargarAnotaciones();
+        const alumnos = anot.datos ? Object.values(anot.datos.alumnos).filter(r => textoAnotacion(r)) : [];
+        let html = `<div class="caja anot-caja">
+            <div class="tit">📝 Anotaciones para el próximo juicio</div>
+            <button class="btn btn-gris" data-act="anot-abrir"><span class="ic">📝</span><span>Abrir las anotaciones de esta libreta<small>${anot.datos ? (alumnos.length ? alumnos.length + ' alumno' + (alumnos.length === 1 ? '' : 's') + ' con anotaciones' : 'Todavía no hay anotaciones') : 'Se abre en otra pestaña'} · actitudes, participación, pendientes</small></span></button>`;
+        if (opciones.pegar && alumnos.length) {
+            const on = anotacionesActivas();
+            html += `<label class="anot-switch"><input type="checkbox" data-act="anot-toggle" ${on ? 'checked' : ''}> Recordármelas acá mientras escribo los juicios</label>`;
+            if (on) {
+                const mapa = anotacionesDeFilas(filas);
+                estado.anotFilas = filas;
+                estado.anotMap = mapa;
+                html += `<div class="anot-lista">` + filas.map((f, i) => {
+                    const t = mapa[i] ? textoAnotacion(mapa[i].rec) : '';
+                    if (!t) return '';
+                    return `<div class="anot"><div class="anot-nom"><span>${escapeHtml(nombreFila(f))}</span><button class="link" data-act="anot-pegar" data-fila="${i}" title="Agrega el texto al juicio de este alumno en la grilla">↘ al juicio</button></div><div class="anot-rec">${escapeHtml(t)}</div></div>`;
+                }).join('') + `</div>`;
+            }
+        }
+        return html + `</div>`;
+    }
+
+    // =====================================================================
+    //  Promedios: se capturan solos de las páginas que los muestran y quedan
+    //  guardados por libreta (y en Drive si está conectado) para retomarlos.
+    // =====================================================================
+    const prom = { firma: '' };
+
+    function capturasDePromedios() {
+        const p = estado.pagina;
+        const capturas = [];
+        if (!p) return capturas;
+        if (p.clave === 'detalle') {
+            estado.filas.forEach(a => (a.periodos || []).forEach(per => {
+                if (!per.orden || !per.orden.length) return;
+                const rend = per.orden.find(c => /^(r|rend|rendimiento|prom|promedio)$/i.test(String(c).trim()));
+                capturas.push({ nombre: a.nombre, periodo: per.nombre, promedio: rend ? per.columnas[rend] : '', columnas: per.columnas, inasistencias: per.inasistencias, origen: 'Orales, Escritos y O. Act.' });
+            }));
+        } else if ((p.clave === 'corrector' || p.clave === 'cierre') && estado.modoCierre !== 'exportar') {
+            const a = estado.filas[0];
+            const ficha = p.clave === 'cierre' ? (a && a.asignaturasVisibles ? C.fichaDesdeCierre(a, estado.comparacionSel) : null) : a;
+            if (ficha && ficha.materias && ficha.materias.length) {
+                const r = C.resumen(ficha, estado.comparacionSel);
+                const nom = m => m.nombre;
+                capturas.push({ nombre: nombreFila(ficha), periodo: ficha.periodo || ficha.titulo || '', promedio: r.promedio === null ? '' : String(r.promedio),
+                    promedioAnterior: r.promedioAnterior === null || r.promedioAnterior === undefined ? '' : String(r.promedioAnterior), comparadoCon: r.comparacion ? r.comparacion.titulo : '',
+                    bajas: r.bajas.length, faltas: ficha.faltas, origen: p.etiqueta,
+                    materias: { bajas: r.bajas.map(nom), subieron: r.subieron.map(nom), bajaron: r.bajaron.map(nom), iguales: r.iguales.length },
+                    notas: ficha.materias.filter(mm => mm.nota).map(mm => [mm.nombre, mm.nota]) });
+            }
+        }
+        return capturas.filter(c => c.nombre && c.periodo);
+    }
+
+    function capturarPromedios() {
+        if (!A) return;
+        const clave = claveLibreta();
+        if (!clave) return;
+        const capturas = capturasDePromedios();
+        if (!capturas.length) return;
+        const firma = clave + '\n' + JSON.stringify(capturas);
+        if (firma === prom.firma) return;
+        prom.firma = firma;
+        const k = 'promedios:' + clave;
+        A.get(k).then(res => {
+            const d = res[k] || { libreta: estado.contexto.libreta, modificado: 0, alumnos: {} };
+            const sinFecha = o => { const x = Object.assign({}, o); delete x.fecha; return JSON.stringify(x); };
+            let cambios = 0;
+            capturas.forEach(c => {
+                const id = idAlumno(c.nombre);
+                const al = d.alumnos[id] || (d.alumnos[id] = { nombre: c.nombre, periodos: {} });
+                const nuevo = Object.assign({}, c, { fecha: Date.now() });
+                delete nuevo.nombre;
+                const viejo = al.periodos[c.periodo];
+                if (!viejo || sinFecha(viejo) !== sinFecha(nuevo)) { al.periodos[c.periodo] = nuevo; cambios++; }
+            });
+            if (!cambios) return;
+            d.modificado = Date.now();
+            d.libreta = estado.contexto.libreta || d.libreta;
+            return A.set({ [k]: d }).then(() => { console.log(`📈 Asistente de SIGED: ${cambios} promedio(s) guardado(s) para retomar`); pedirSync(); });
+        }).catch(() => {});
+    }
+
+    function cargarPromediosLibro() {
+        if (!A) return;
+        const clave = claveLibreta();
+        if (!clave) return;
+        estado.promediosLibro = null;
+        A.get('promedios:' + clave).then(res => { estado.promediosLibro = res['promedios:' + clave] || false; render(); }).catch(() => {});
+    }
+
+    function renderPromediosLibro() {
+        if (!A || !claveLibreta()) return '';
+        if (estado.promediosLibro === undefined) cargarPromediosLibro();
+        const d = estado.promediosLibro;
+        if (!d) return '';
+        const alumnos = Object.values(d.alumnos || {});
+        const periodos = new Set(); alumnos.forEach(a => Object.keys(a.periodos || {}).forEach(p => periodos.add(p)));
+        return `<div class="caja" style="border-color:#bfe3c6;background:#f4fbf5">
+            <div class="tit">📈 Promedios guardados de esta libreta</div>
+            <div class="ayuda">${alumnos.length} alumno${alumnos.length === 1 ? '' : 's'} · ${periodos.size} período${periodos.size === 1 ? '' : 's'} · última captura ${hace(d.modificado || 0)}.<br>
+                Se guardan solos cada vez que el asistente ve promedios (Orales, Escritos y O. Act. con TODOS, Cierre de promedios o Corrector por curso).</div>
+            <button class="btn btn-gris" data-act="promedios-excel"><span class="ic">📥</span><span>Descargar historial de promedios (Excel)<small>Un alumno por fila, un período por columna</small></span></button>
+        </div>`;
+    }
+
+    function exportarPromediosLibro() {
+        const d = estado.promediosLibro;
+        if (!d) return;
+        const alumnos = Object.values(d.alumnos || {}).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        const periodos = [];
+        alumnos.forEach(a => Object.keys(a.periodos || {}).forEach(p => { if (!periodos.includes(p)) periodos.push(p); }));
+        const filas = alumnos.map(a => [a.nombre].concat(periodos.map(p => (a.periodos[p] ? String(a.periodos[p].promedio || '') : ''))));
+        const detalle = [];
+        alumnos.forEach(a => Object.keys(a.periodos || {}).forEach(p => {
+            const c = a.periodos[p];
+            const extra = Object.assign({}, c.columnas || {});
+            detalle.push([a.nombre, p, String(c.promedio || ''), c.bajas === undefined ? '' : String(c.bajas),
+                c.faltas ? ['justificadas', 'injustificadas', 'fictas'].map(k => c.faltas[k] || '0').join(' / ') : (c.inasistencias ? Object.entries(c.inasistencias).map(([k, v]) => `${k} ${v}`).join(' ') : ''),
+                Object.entries(extra).map(([k, v]) => `${k}: ${v}`).join(' · '), c.origen || '', c.fecha ? new Date(c.fecha).toLocaleDateString('es-UY') : '']);
+        }));
+        try {
+            const nombre = F.descargarLibro({
+                hojas: [
+                    { nombre: 'Promedios', encabezados: ['Estudiante'].concat(periodos), filas, anchos: [38].concat(periodos.map(() => 16)) },
+                    { nombre: 'Detalle', encabezados: ['Estudiante', 'Período', 'Promedio', 'Bajas', 'Faltas (J / NJ / F)', 'Otros datos', 'Origen', 'Capturado'], filas: detalle, anchos: [38, 22, 10, 8, 18, 60, 30, 12] }
+                ],
+                info: [['Libreta', d.libreta || estado.contexto.libreta], ['Generado por', 'Asistente de SIGED'], ['Fecha', new Date().toLocaleDateString('es-UY')]],
+                nombreBase: ['Promedios', d.libreta || estado.contexto.libreta, new Date().toISOString().slice(0, 10)]
+            });
+            estado.mensaje = { tipo: 'ok', texto: `Archivo descargado: ${nombre}` };
+        } catch (e) {
+            estado.mensaje = { tipo: 'error', texto: 'No se pudo generar el archivo: ' + e.message };
+        }
+        render();
+    }
+
     /** Evaluaciones de la página de detalle agrupadas por tipo y fecha (para copiar una puntual) */
     function actividadesDetalle() {
         const grupos = new Map();
@@ -1255,6 +1521,13 @@
         .punto { width: 9px; height: 9px; border-radius: 50%; background: #95a5a6; display: inline-block; }
         .punto.on { background: #2ecc71; }
         .ayuda { font-size: 11px; color: #7f8c8d; line-height: 1.5; }
+        .plantilla-nombres { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+        .plantilla-nombres input { font-size: 12px; padding: 4px 6px; }
+        .anot-caja { border-color: #d3c5ea !important; background: #faf7ff !important; }
+        .anot-switch { font-weight: 400; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 3px; color: #6c5a8e; text-transform: none; }
+        .anot-lista { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+        .anot-nom { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: #4a3b6b; margin-bottom: 2px; }
+        .anot-rec { font-size: 11px; color: #4a3b6b; background: #fff; border: 1px solid #e4dbf3; border-radius: 5px; padding: 4px 6px; }
         .ficha { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
         .ficha .cab { display: flex; gap: 12px; align-items: center; }
         .ficha .foto { width: 64px; height: 80px; border-radius: 8px; object-fit: cover; background: #ecf0f1; border: 1px solid #d5dbe0; flex: none; }
@@ -1311,6 +1584,7 @@
                 <div class="cuerpo">${renderCuerpo()}</div>
             </div>`;
         activarArrastre();
+        try { capturarPromedios(); } catch (e) { console.debug('promedios', e); }
         cont.querySelectorAll('.ficha img.foto').forEach(img => {
             img.addEventListener('error', () => { const d = document.createElement('div'); d.className = 'sinfoto'; d.textContent = '🧑‍🎓'; img.replaceWith(d); }, { once: true });
         });
@@ -1362,16 +1636,21 @@
             if (estado.filas.length === 0) {
                 html += `<div class="msg msg-aviso">Seleccioná una libreta para ver los alumnos del grupo.</div>`;
             } else {
-                html += `<button class="btn btn-azul" data-act="exportar" data-formato="${xlsx ? 'xlsx' : 'csv'}">
-                            <span class="ic">📥</span><span>Descargar plantilla del grupo${xlsx ? ' (Excel)' : ' (CSV)'}
-                            <small>Lista de alumnos con columnas Nota y Comentario para completar</small></span></button>`;
-                if (xlsx) html += `<div style="text-align:center"><button class="link" data-act="exportar" data-formato="csv">Prefiero descargarla en CSV</button></div>`;
+                if (estado.plantilla) {
+                    html += renderPlantilla(xlsx);
+                } else {
+                    html += `<button class="btn btn-azul" data-act="plantilla-abrir">
+                                <span class="ic">📥</span><span>Descargar plantilla del grupo${xlsx ? ' (Excel)' : ' (CSV)'}
+                                <small>Lista de alumnos con una o varias tareas para completar</small></span></button>`;
+                }
                 html += `<button class="btn btn-verde" data-act="armar-grupos">
                             <span class="ic">👥</span><span>Armar grupos con este grupo
                             <small>Fichas con foto para arrastrar, repartir al azar y ponerles nota</small></span></button>`;
-                html += `<div class="ayuda">1. Completá la columna <b>Nota</b> en la plantilla.<br>
+                html += `<div class="ayuda">1. Completá la columna <b>Nota</b> de cada tarea en la plantilla.<br>
                          2. Entrá en SIGED a la evaluación (o al boletín) donde van esas notas.<br>
-                         3. Usá <b>Importar notas desde archivo</b> y revisá antes de guardar.</div>`;
+                         3. Usá <b>Importar notas desde archivo</b>, elegí la tarea y revisá antes de guardar.</div>`;
+                html += renderPromediosLibro();
+                html += renderAnotaciones(estado.filas, {});
             }
             return html + renderMensaje();
         }
@@ -1390,6 +1669,31 @@
         }
         html += renderMensaje();
         if (estado.archivo) html += renderArchivo();
+        html += renderAnotaciones(estado.filas, { pegar: p.clave === 'boletin', soloConTexto: p.clave === 'boletin' });
+        return html;
+    }
+
+    /** Diálogo previo a descargar la plantilla: cuántas tareas, sus nombres y si llevan comentario */
+    function renderPlantilla(xlsx) {
+        const pl = estado.plantilla;
+        const cantidad = Math.max(1, Math.min(30, parseInt(pl.cantidad, 10) || 1));
+        let html = `<div class="caja" style="border-color:#9ec5e8;background:#f3f9ff">
+            <div class="tit">📥 Plantilla del grupo</div>
+            <label>¿Cuántas tareas querés incluir en la planilla?</label>
+            <input type="number" min="1" max="30" value="${cantidad}" data-act="plantilla-cant" style="width:70px">`;
+        if (cantidad > 1 || (pl.nombres[0] || '').trim()) {
+            html += `<label>Nombre de cada tarea (opcional)</label><div class="plantilla-nombres">`;
+            for (let i = 0; i < cantidad; i++) {
+                html += `<input type="text" maxlength="40" data-act="plantilla-nombre" data-i="${i}" value="${escapeHtml(pl.nombres[i] || '')}" placeholder="Tarea ${i + 1}">`;
+            }
+            html += `</div>`;
+        } else {
+            html += `<div class="ayuda">Con una sola tarea la planilla lleva las columnas <b>Nota</b> y <b>Comentario</b>. <button class="link" data-act="plantilla-nombrar">Ponerle nombre a la tarea</button></div>`;
+        }
+        html += `<label style="font-weight:400;font-size:12px"><input type="checkbox" data-act="plantilla-coment" ${pl.comentario !== false ? 'checked' : ''}> Agregar una columna de comentario por tarea</label>
+            <button class="btn btn-azul" data-act="plantilla-descargar" data-formato="${xlsx ? 'xlsx' : 'csv'}"><span class="ic">📥</span><span>Descargar${xlsx ? ' (Excel)' : ' (CSV)'}<small>${cantidad} tarea${cantidad === 1 ? '' : 's'} · ${estado.filas.length} alumnos</small></span></button>
+            <div style="text-align:center">${xlsx ? '<button class="link" data-act="plantilla-descargar" data-formato="csv">Prefiero CSV</button> · ' : ''}<button class="link" data-act="plantilla-cerrar">Cancelar</button></div>
+        </div>`;
         return html;
     }
 
@@ -1448,6 +1752,7 @@
             html += `<div class="ayuda">No hay evaluaciones anteriores para comparar. Activá "Mostrar todas las evaluaciones anteriores" en SIGED.</div>`;
         }
         html += `<div class="ayuda">${a.materias.length} materias en ${escapeHtml(a.periodo || 'esta reunión')}. La ficha se actualiza sola al cambiar de alumno.</div></div>`;
+        html += renderAnotaciones([a], {});
         return html + renderMensaje();
     }
 
@@ -1483,6 +1788,7 @@
                  <small>${cantEval} evaluaciones con comentarios · promedios por período · resumen</small></span></button>`;
         html += `<div class="ayuda">El Excel completo tiene tres hojas: <b>Notas</b> (cada evaluación con fecha, tipo, nota, comentario y período), <b>Promedios</b> (notas por tipo, rendimiento e inasistencias de cada período) y <b>Resumen</b> (datos, semestrales y rendimiento por período).<br>
                  Los juicios de las reuniones no están en esta página: exportalos desde <b>Pasaje de calificaciones boletín</b>.</div>`;
+        html += renderAnotaciones(alumnos, {});
         return html + renderMensaje();
     }
 
@@ -1552,7 +1858,7 @@
                  · <button class="link" data-act="quitar">quitar</button></span></div>`;
 
         if (d.actividades.length > 1) {
-            html += `<div><label>¿Qué evaluación del archivo querés cargar?</label>
+            html += `<div><label>${d.formato === 'tareas' ? '¿Qué tarea de la planilla querés cargar?' : '¿Qué evaluación del archivo querés cargar?'}</label>
                      <select data-act="actividad">
                         <option value="">Elegí una…</option>
                         ${d.actividades.map(a => `<option value="${escapeHtml(a)}" ${a === estado.actividad ? 'selected' : ''}>${escapeHtml(a)}</option>`).join('')}
@@ -1661,6 +1967,13 @@
             case 'guardadas-usar': usarGuardadas(); break;
             case 'guardadas-olvidar': olvidarGuardadas(); break;
             case 'armar-grupos': prepararGrupos(); break;
+            case 'plantilla-abrir': estado.plantilla = { cantidad: 1, nombres: [], comentario: true }; estado.mensaje = null; render(); break;
+            case 'plantilla-cerrar': estado.plantilla = null; render(); break;
+            case 'plantilla-nombrar': estado.plantilla.nombres[0] = estado.plantilla.nombres[0] || ' '; render(); break;
+            case 'plantilla-descargar': exportar(btn.dataset.formato); break;
+            case 'promedios-excel': exportarPromediosLibro(); break;
+            case 'anot-pegar': pegarAnotacion(parseInt(btn.dataset.fila, 10)); break;
+            case 'anot-abrir': abrirAnotaciones(); break;
             case 'exportar-cierre': exportarCierreActual(); break;
             case 'recorrido-iniciar': iniciarRecorrido(); break;
             case 'recorrido-detener': detenerRecorrido(true); break;
@@ -1706,12 +2019,29 @@
             estado.alumnoSel = el.value;
             estado.mensaje = null;
             render();
+        } else if (act === 'plantilla-cant') {
+            estado.plantilla.cantidad = Math.max(1, Math.min(30, parseInt(el.value, 10) || 1));
+            render();
+        } else if (act === 'plantilla-coment') {
+            estado.plantilla.comentario = el.checked;
+            render();
+        } else if (act === 'anot-toggle') {
+            try { localStorage.setItem(CLAVE_ANOT_ON, el.checked ? '1' : '0'); } catch (e) { /* ignorar */ }
+            render();
         } else if (act === 'asignar') {
             const fi = parseInt(el.dataset.fila, 10);
             estado.asignacion[fi] = parseInt(el.value, 10);
             if (estado.scores) estado.scores[fi] = 0;
             estado.resultado = null;
             render();
+        }
+    });
+
+    raiz.addEventListener('input', (ev) => {
+        const el = ev.target;
+        const act = el.dataset && el.dataset.act;
+        if (act === 'plantilla-nombre' && estado.plantilla) {
+            estado.plantilla.nombres[parseInt(el.dataset.i, 10)] = el.value;
         }
     });
 
@@ -1818,6 +2148,12 @@
                     else if (estado.pagina && estado.pagina.clave === 'cierre') exportarCierreActual();
                     else exportar(req.formato);
                     sendResponse({ ok: true });
+                    break;
+                case 'driveActualizado':
+                    // Llegaron datos nuevos desde Google Drive: se releen anotaciones y promedios
+                    anot.clave = '';
+                    estado.promediosLibro = undefined;
+                    render();
                     break;
                 case 'importar':
                     // El selector de archivos solo puede abrirse con un clic del usuario en la página,

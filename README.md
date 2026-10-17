@@ -4,7 +4,7 @@ Extensión de Chrome/Edge para **importar y exportar notas en SIGED sin pasarlas
 Muestra un panel dentro de la propia página de SIGED que **detecta solo en qué pantalla estás** y
 ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se hace con dos o tres clics.
 
-![Version](https://img.shields.io/badge/version-3.8.1-blue)
+![Version](https://img.shields.io/badge/version-3.9-blue)
 ![Chrome](https://img.shields.io/badge/Chrome-Compatible-brightgreen)
 ![Edge](https://img.shields.io/badge/Edge-Compatible-brightgreen)
 
@@ -12,7 +12,7 @@ ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se h
 
 | Página de SIGED | Qué ofrece el panel |
 |-----------------|---------------------|
-| **Libro del Profesor** (lista de alumnos del grupo) | 📥 Descargar la **plantilla del grupo** (Excel o CSV) con todos los alumnos y columnas *Nota* y *Comentario* para completar. · 👥 **Armar grupos**: abre una página propia con las fichas de los alumnos (con su foto de SIGED) para repartirlos al azar o arrastrarlos, ponerle nota a cada grupo y mandar esas notas al asistente para cargarlas en la evaluación que elijas. |
+| **Libro del Profesor** (lista de alumnos del grupo) | 📥 Descargar la **plantilla del grupo** (Excel o CSV): antes de bajarla preguntá cuántas **tareas** incluir, cada una con su columna de nota y de comentario; al importarla el asistente pregunta qué tarea cargar. · 📝 Acceso a las **anotaciones para el próximo juicio** y 📈 **promedios guardados** de la libreta. · 👥 **Armar grupos**: abre una página propia con las fichas de los alumnos (con su foto de SIGED) para repartirlos al azar o arrastrarlos, ponerle nota a cada grupo y mandar esas notas al asistente para cargarlas en la evaluación que elijas. |
 | **Evaluaciones** (escritos, parciales, orales, etc.) | 📥 Exportar las notas ya cargadas · 📤 Importar notas desde un archivo. |
 | **Pasaje de calificaciones boletín por libreta** (semestrales, reuniones) | 📥 Exportar notas y juicios · 📤 Importar notas y juicios desde un archivo. |
 | **Orales, Escritos y O. Actividades** (detalle por alumno) | 📥 Descargar un Excel con **todas las notas y comentarios**, los **promedios por período** (notas por tipo, rendimiento e inasistencias) y un resumen por alumno. De un alumno o de todos los visibles. |
@@ -47,12 +47,28 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 > Se guarda una sola evaluación a la vez para que sea simple. Si preferís un archivo, cada evaluación también se puede descargar en Excel desde el mismo lugar.
 
 ### 3c. Armar grupos de trabajo con fotos y cargarles la nota (Libro del Profesor)
-1. En el **Libro del Profesor**, elegí la libreta y hacé clic en **Armar grupos con este grupo**. Se abre otra pestaña con la ficha de cada alumno (foto y nombre).
+1. En el **Libro del Profesor**, elegí la libreta y hacé clic en **Armar grupos con este grupo**. Se abre otra pestaña con una **carta** por alumno, estilo figurita: foto, **promedio** (verde, ámbar o rojo), materias que **subieron ▲ / bajaron ▼** respecto del período anterior, la nota en **esta materia** con su tendencia y las **faltas**. Los datos salen de los promedios que el asistente guarda solo cuando ves Orales/Escritos (TODOS), el Cierre o el Corrector en SIGED; con el botón **i** se abre la ficha completa (períodos, materias con baja, notas por materia y anotaciones para el juicio).
 2. Hacé clic en **＋ Nueva** y ponele nombre a la actividad (por ejemplo "Proyecto de óptica").
-3. Elegí **Repartir en N grupos** o **grupos de N integrantes** y usá **🎲 Al azar** o **🔤 En orden de lista**. Para retocar, tocá una o varias fichas y después tocá el grupo donde van (o arrastralas); también podés agregar o quitar grupos y cambiarles el nombre.
+3. Elegí **Repartir en N grupos** o **grupos de N integrantes** y usá **🎲 Al azar**, **🔤 En orden de lista** o **⚖️ Equilibrados** (reparte en serpentina por promedio, así cada grupo mezcla alumnos que van bien y otros que van más flojos; cada grupo muestra su promedio). Para retocar, tocá una o varias cartas y después tocá el grupo donde van (o arrastralas); también podés agregar o quitar grupos y cambiarles el nombre.
 4. Escribí la **nota del grupo** arriba a la derecha de cada grupo (y un comentario, si querés). Si un integrante lleva otra nota, escribila en su ficha.
 5. **📤 Mandar notas al asistente**: entrá en SIGED a la evaluación donde van (Escritos, Parcial, etc.) y el panel te ofrece **Cargar estas notas acá**, con la vista previa de siempre. También podés bajar un **Excel** (hoja *Notas* importable) o **imprimir** los grupos con las fotos.
 6. Todo queda guardado en tu navegador: podés cerrar la pestaña y retomar después (ícono de la extensión → **Armar grupos**), tener varias actividades por libreta y duplicar unos grupos para otra actividad. Con **💾 Respaldo** podés descargar un archivo para pasarlo a otra computadora.
+
+### 3d. Una planilla con varias tareas (Libro del Profesor → Evaluaciones)
+1. En el **Libro del Profesor**, **Descargar plantilla del grupo**: un cuadro pregunta **cuántas tareas** incluir, el nombre de cada una (opcional) y si llevan columna de comentario.
+2. La planilla tiene, por tarea, una columna con su nombre (la nota) y otra "*Tarea* - Comentario".
+3. Al importarla en **Evaluaciones** o en el **Boletín**, el asistente pregunta **qué tarea de la planilla cargar** (igual que con una exportación de CREA) y muestra la vista previa de esa tarea.
+
+### 3e. Anotaciones para el próximo juicio
+- En cualquier página de una libreta el panel tiene el acceso **📝 Abrir las anotaciones de esta libreta**, que abre una **página propia** (también desde el ícono de la extensión → Anotaciones) con la lista de alumnos (con sus fotos si ya usaste Armar grupos).
+- Por alumno se agregan **entradas fechadas**: etiquetas rápidas (Participa, Colabora, Mejoró, No entrega tareas, Distraído/a, Conducta, Necesita apoyo…) más texto libre. Se guardan solas en el navegador (y en Drive si está conectado), se exportan a Excel y se imprimen.
+- En **Pasaje de calificaciones al boletín**, el panel muestra cuántos alumnos tienen anotaciones y un interruptor **Recordármelas acá mientras escribo los juicios**: activado, lista a cada alumno anotado con el botón **↘ al juicio**, que pega el texto (etiquetas + anotaciones, en orden) en el campo de juicio de esa fila para que lo edites y guardes en SIGED. Los textos no se muestran en el panel en las demás páginas.
+
+### 3f. Promedios que se guardan solos
+Cada vez que el asistente ve promedios (Orales, Escritos y O. Act. con TODOS, la ficha del Cierre de promedios o el Corrector por curso) los guarda por libreta, alumno y período. En el **Libro del Profesor** la tarjeta **📈 Promedios guardados** muestra cuántos hay y permite **descargar el historial en Excel** (un alumno por fila, un período por columna, más una hoja de detalle con faltas y bajas).
+
+### 3g. Copia en Google Drive (opcional)
+En la página **Armar grupos**, arriba a la derecha, **☁ Conectar** con tu cuenta de Google. La extensión crea en tu Drive la carpeta **Asistente de SIGED / <año lectivo>** y guarda ahí, por libreta, las fichas con fotos, las actividades con sus grupos, las anotaciones y los promedios. Se sincroniza sola después de cada cambio y al abrir el navegador; con **Retomar año…** podés traer lo guardado de otro año o de otra computadora. Requiere configurar un ID de cliente de Google (ver [INSTALACION.md](INSTALACION.md#-google-drive-opcional)).
 
 ### 4. Exportar todas las notas de la libreta con promedios (Orales, Escritos y O. Actividades)
 1. Entrá en SIGED a **Orales, Escritos y O. Actividades**. Si solo ves un alumno, hacé clic en **TODOS** (el panel tiene un botón que lo hace por vos) y en **Mostrar detalle (todos)**.
@@ -106,7 +122,8 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 - Todo ocurre en tu navegador: los archivos no se suben a ningún servidor.
 - La extensión **nunca guarda por vos**: solo completa los campos y te lleva al botón *Guardar* de SIGED para que revises.
 - Solo se activa en dominios de SIGED (`*.siged.com.uy`, `*.siged.com`, `*.siged.edu.uy`).
-- Los grupos, las actividades y las fichas de los alumnos (nombre y una copia reducida de la foto, solo de las libretas en las que usaste **Armar grupos**) se guardan en el almacenamiento local de la extensión en tu navegador, nunca fuera de él. Se borran al desinstalar la extensión.
+- Los grupos, las actividades y las fichas de los alumnos (nombre y una copia reducida de la foto, solo de las libretas en las que usaste **Armar grupos**), las anotaciones para el juicio y los promedios capturados se guardan en el almacenamiento local de la extensión en tu navegador. Se borran al desinstalar la extensión.
+- Solo si conectás tu cuenta de Google, esos mismos datos se copian a **tu** Google Drive (carpeta *Asistente de SIGED*), con el permiso `drive.file`, que únicamente permite ver y editar los archivos que la propia extensión crea. Nunca pasan por otro servidor.
 
 ## 📁 Estructura del proyecto
 
@@ -114,14 +131,16 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 CargaNotasSIGED/
 ├── manifest.json          # Configuración de la extensión (Manifest V3)
 ├── content.js             # Panel en la página: detección de página, importar/exportar, carga de notas
-├── background.js          # Service worker: abre la página de grupos a pedido del panel
-├── grupos.html / grupos.js # Página "Armar grupos": fichas con foto, reparto, notas por grupo, Excel e impresión
+├── background.js          # Service worker: abre la página de grupos y sincroniza con Google Drive
+├── grupos.html / grupos.js # Página "Armar grupos": cartas con foto y estadísticas, reparto (azar / lista / equilibrado), notas por grupo, Excel e impresión
+├── anotaciones.html / anotaciones.js # Página "Anotaciones para el juicio": entradas fechadas con etiquetas por alumno
 ├── shared/
 │   ├── matching.js        # Comparación de nombres (Levenshtein, tokens, asignación única)
 │   ├── formatos.js        # Lectura/escritura de Excel y CSV, detección de columnas y formatos
 │   ├── detalle.js         # Lectura de "Orales, Escritos y O. Act." y "Cierre de promedios por alumno"; Excel con juicios y promedios
 │   ├── corrector.js       # Lectura de "Corrector por curso" y resumen para la mini ficha del alumno
-│   └── almacen.js         # Almacén local compartido (chrome.storage) entre SIGED y las páginas de la extensión
+│   ├── almacen.js         # Almacén local compartido (chrome.storage) entre SIGED y las páginas de la extensión
+│   └── drive.js           # Sincronización con Google Drive (carpeta Asistente de SIGED / año)
 ├── lib/xlsx.full.min.js   # SheetJS (Apache-2.0) para leer y generar archivos Excel
 ├── popup.html / popup.js  # Ventana del ícono: muestra dónde estás y abre el panel
 ├── icon16.png, icon48.png, icon128.png
@@ -145,6 +164,13 @@ La detección se hace por el contenido, no por la URL:
 3. Si podés, agregá una captura del panel y los mensajes de la consola (F12).
 
 ## 📝 Changelog
+
+### v3.9
+- ✨ **Plantilla con varias tareas**: antes de descargarla, el Libro pregunta cuántas tareas incluir (con nombre y comentario por tarea); al importar se elige qué tarea cargar.
+- ✨ **Anotaciones para el próximo juicio** en una página propia (entradas fechadas con etiquetas y texto por alumno, Excel, impresión); el panel solo da el acceso y, en el boletín, los recordatorios con "↘ al juicio".
+- ✨ **Cartas de alumnos** en Armar grupos: promedio, materias que subieron/bajaron, nota en la materia, faltas y ficha completa con un clic; reparto **⚖️ Equilibrado** por promedio y promedio por grupo.
+- ✨ **Promedios guardados solos** desde las páginas que los muestran, con historial descargable en Excel desde el Libro.
+- ✨ **Google Drive** opcional: copia en *Asistente de SIGED / año* de fichas, grupos, anotaciones y promedios; sincronización automática y "Retomar año…".
 
 ### v3.8.1
 - ✨ Página de grupos más cómoda: "Sin grupo" es una barra lateral fija con fichas chicas, los grupos son más compactos y se pueden tocar una o varias fichas y después tocar el grupo de destino (además de arrastrar).

@@ -44,7 +44,7 @@
 1. Entra a SIGED y recarga la página (F5) si ya la tenías abierta.
 2. Abajo a la derecha aparece el panel **🎓 Asistente de SIGED** (si está minimizado, haz clic en el botón).
 3. El panel reconoce solo la página:
-   - **Libro del Profesor:** botón para descargar la plantilla del grupo y botón **Armar grupos** (abre otra pestaña con las fichas y fotos de los alumnos).
+   - **Libro del Profesor:** plantilla del grupo (con una o varias tareas), **Armar grupos** (otra pestaña con cartas de los alumnos: foto, promedio, materias que subieron o bajaron, faltas), acceso a las **anotaciones para el juicio** (página propia) y promedios guardados.
    - **Evaluaciones** y **Pasaje de calificaciones boletín:** botones para exportar e importar notas.
    - **Orales, Escritos y O. Actividades:** botón para descargar el Excel con notas, comentarios y promedios por período.
    - **Cierre de promedios por alumno:** selector para ver la ficha del alumno (notas por materia) o recorrer todos los alumnos y descargar el Excel con los juicios de todas las reuniones.
@@ -122,6 +122,23 @@ Para publicar la extensión oficialmente:
 5. **Esperar Aprobación:**
    - Google revisa la extensión (1-3 días generalmente)
    - Una vez aprobada, estará disponible públicamente
+
+---
+
+## ☁ Google Drive (opcional)
+
+La página **Armar grupos** ofrece **Conectar** con Google Drive para guardar una copia de los grupos, fichas, anotaciones y promedios en la carpeta `Asistente de SIGED / <año>` del Drive del docente. Para que el botón funcione, la extensión necesita un **ID de cliente OAuth** propio (Google no permite usar uno genérico). Es un trámite único de quien publica la extensión:
+
+1. Entrá en https://console.cloud.google.com y creá un proyecto (por ejemplo "Asistente de SIGED").
+2. **APIs y servicios → Biblioteca**: buscá **Google Drive API** y habilitala.
+3. **APIs y servicios → Pantalla de consentimiento OAuth**: tipo *Externo*, nombre "Asistente de SIGED", tu correo de soporte; en *Permisos* agregá `https://www.googleapis.com/auth/drive.file`. Mientras la app esté "En pruebas" solo pueden conectar los correos que agregues como *usuarios de prueba*; para que lo use cualquier docente, publicala (con el permiso `drive.file` no exige verificación completa).
+4. **APIs y servicios → Credenciales → Crear credenciales → ID de cliente de OAuth**: tipo de aplicación **Extensión de Chrome**, y en *ID del elemento* pegá el ID de la extensión (el que figura en `chrome://extensions` o en la URL de la Chrome Web Store, 32 letras).
+5. Copiá el *ID de cliente* generado (termina en `.apps.googleusercontent.com`) en `manifest.json`, campo `oauth2.client_id`, reemplazando `PONER_AQUI_EL_ID_DE_CLIENTE...`. Volvé a empaquetar (`./empaquetar.sh`) y subí la nueva versión.
+
+Notas:
+- El ID de la extensión instalada "sin empaquetar" es distinto del de la tienda. Para que coincidan, copiá la clave pública del paquete (panel de desarrollador → *Paquete* → *Ver clave pública*) en el campo `"key"` del `manifest.json` de la copia local.
+- Si el ID de cliente no está configurado, el botón **Conectar** avisa y todo lo demás sigue funcionando (los datos quedan solo en el navegador).
+- Permisos que usa: `identity` (pedir el token de Google a Chrome) e `identity.email` (mostrar con qué cuenta está conectado). Lo guardado en Drive solo lo ve el docente.
 
 ---
 

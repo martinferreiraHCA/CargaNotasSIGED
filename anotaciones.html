@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anotaciones para el juicio · Asistente de SIGED</title>
+    <link rel="icon" href="icon48.png">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 14px; color: #2c3e50; background: #f3f0f8; }
+        header { background: #4a3b6b; color: #fff; padding: 10px 18px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+        header h1 { font-size: 17px; margin: 0; font-weight: 700; white-space: nowrap; }
+        header select { padding: 6px 8px; border-radius: 6px; border: 1px solid #b9c4cf; font-size: 13px; background: #fff; color: #2c3e50; }
+        header .estado { margin-left: auto; font-size: 12px; opacity: .85; white-space: nowrap; }
+        .btn { border: 0; border-radius: 7px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .btn:hover:not(:disabled) { filter: brightness(1.08); }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-morado { background: #7b5ea7; color: #fff; }
+        .btn-gris { background: #e9e4f2; color: #2c3e50; }
+        .btn-claro { background: rgba(255,255,255,.15); color: #fff; }
+        .btn-chico { padding: 4px 8px; font-size: 12px; }
+        .mensaje { margin: 10px 18px 0; padding: 10px 14px; border-radius: 8px; border-left: 4px solid; font-size: 13px; display: none; }
+        .mensaje.ok { display: block; background: #d4edda; border-color: #28a745; color: #155724; }
+        .mensaje.aviso { display: block; background: #fff3cd; border-color: #ffc107; color: #856404; }
+        .mensaje.error { display: block; background: #f8d7da; border-color: #dc3545; color: #721c24; }
+        .mensaje.info { display: block; background: #e8e2f3; border-color: #7b5ea7; color: #3f2f5e; }
+        main { padding: 14px 18px 40px; display: grid; grid-template-columns: 290px 1fr; gap: 14px; align-items: start; }
+        .columna { background: #fff; border: 1px solid #ddd6e8; border-radius: 10px; position: sticky; top: 58px; max-height: calc(100vh - 70px); display: flex; flex-direction: column; }
+        .columna h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .4px; color: #7f8c8d; margin: 0; padding: 10px 12px; border-bottom: 1px solid #eee9f4; }
+        .buscar { margin: 8px; padding: 6px 8px; border: 1px solid #ccd3d9; border-radius: 6px; font-size: 13px; }
+        .lista { overflow-y: auto; flex: 1; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 4px; }
+        .alumno { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
+        .alumno:hover { background: #f3f0f8; }
+        .alumno.activo { background: #ece6f5; border-color: #c9b9e6; }
+        .alumno img, .alumno .inicial { width: 30px; height: 36px; border-radius: 5px; object-fit: cover; background: #dfe6ec; flex: none; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #5a6c7d; font-size: 13px; }
+        .alumno .nom { flex: 1; min-width: 0; font-size: 12px; line-height: 1.2; }
+        .alumno .nom b { display: block; }
+        .alumno .cant { font-size: 11px; background: #7b5ea7; color: #fff; border-radius: 10px; padding: 1px 7px; }
+        .alumno .cant.cero { background: #e3dced; color: #7f8c8d; }
+        .detalle { background: #fff; border: 1px solid #ddd6e8; border-radius: 10px; padding: 14px 16px; }
+        .detalle .cab { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .detalle .cab img, .detalle .cab .inicial { width: 56px; height: 68px; border-radius: 8px; object-fit: cover; background: #dfe6ec; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; color: #5a6c7d; }
+        .detalle .cab h3 { margin: 0; font-size: 18px; }
+        .detalle .cab .sub { font-size: 12px; color: #7f8c8d; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+        .chip { border: 1px solid #c9b9e6; background: #f6f2fb; color: #4a3b6b; border-radius: 14px; padding: 3px 10px; font-size: 12px; cursor: pointer; user-select: none; }
+        .chip:hover { background: #ece6f5; }
+        .chip.on { background: #7b5ea7; color: #fff; border-color: #7b5ea7; }
+        .chip.positivo { border-color: #9bd3a5; } .chip.negativo { border-color: #e8a3a3; }
+        .chip.positivo.on { background: #2e9e4f; border-color: #2e9e4f; } .chip.negativo.on { background: #c0392b; border-color: #c0392b; }
+        textarea { width: 100%; min-height: 64px; padding: 8px; border: 1px solid #ccd3d9; border-radius: 6px; font-size: 13px; font-family: inherit; resize: vertical; }
+        .fila { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+        .fila input[type=date] { padding: 6px; border: 1px solid #ccd3d9; border-radius: 6px; font-size: 13px; }
+        .entradas { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+        .entrada { border: 1px solid #eee9f4; border-left: 4px solid #7b5ea7; border-radius: 8px; padding: 8px 10px; display: flex; gap: 10px; align-items: flex-start; background: #fcfbfe; }
+        .entrada .fecha { font-size: 11px; color: #7f8c8d; white-space: nowrap; min-width: 78px; }
+        .entrada .cuerpo { flex: 1; font-size: 13px; }
+        .entrada .etq { display: inline-block; font-size: 11px; background: #ece6f5; color: #4a3b6b; border-radius: 10px; padding: 1px 8px; margin: 0 4px 4px 0; }
+        .entrada .borrar { background: none; border: 0; color: #95a5a6; cursor: pointer; font-size: 15px; }
+        .entrada .borrar:hover { color: #c0392b; }
+        .resumen { margin-top: 16px; border-top: 1px dashed #ddd6e8; padding-top: 12px; }
+        .resumen h4 { margin: 0 0 6px; font-size: 13px; color: #4a3b6b; }
+        .resumen .texto { background: #fff8e1; border: 1px solid #f0d9a0; border-radius: 8px; padding: 10px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+        .vacio { color: #b0b8bf; font-size: 13px; text-align: center; padding: 30px; }
+        .ayuda { font-size: 12px; color: #7f8c8d; margin: 0 18px; }
+        .barra { background: #fff; border-bottom: 1px solid #ddd6e8; padding: 8px 18px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: #5a6c7d; }
+        @media print { header, .barra, .mensaje, .ayuda, .columna, .fila, .chips, textarea, .borrar { display: none !important; } main { display: block; } }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📝 Anotaciones para el juicio</h1>
+        <select id="libretaSelect" title="Libreta"></select>
+        <span class="estado" id="estadoGuardado"></span>
+    </header>
+    <div class="barra">
+        <span>Anotá durante el período lo que quieras recordar al escribir el juicio: actitudes, participación, pendientes. El asistente te las recuerda en el boletín y las pega en el juicio con un clic.</span>
+        <button class="btn btn-gris btn-chico" id="btnExcel" title="Todas las anotaciones de la libreta en Excel">📥 Excel</button>
+        <button class="btn btn-gris btn-chico" id="btnImprimir">🖨 Imprimir</button>
+    </div>
+    <div class="mensaje" id="mensaje"></div>
+    <main>
+        <section class="columna">
+            <h2>Alumnos (<span id="cantAlumnos">0</span>)</h2>
+            <input class="buscar" id="buscar" type="search" placeholder="Buscar alumno…">
+            <div class="lista" id="lista"></div>
+        </section>
+        <section class="detalle" id="detalle"><div class="vacio">Elegí un alumno de la lista.</div></section>
+    </main>
+    <script src="lib/xlsx.full.min.js"></script>
+    <script src="shared/matching.js"></script>
+    <script src="shared/formatos.js"></script>
+    <script src="shared/almacen.js"></script>
+    <script src="anotaciones.js"></script>
+</body>
+</html>
