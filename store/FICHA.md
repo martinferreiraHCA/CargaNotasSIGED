@@ -18,11 +18,11 @@ Asistente de SIGED es una extensión pensada para docentes que trabajan con el s
 
 QUÉ HACE EN CADA PÁGINA DE SIGED
 
-• Libro del Profesor: armá grupos de trabajo con un clic. Se abre una página con la ficha y la foto de cada alumno: repartilos al azar o en orden de lista (en N grupos o en grupos de N), tocá o arrastrá las fichas para acomodarlos, ponele nombre a la actividad y nota a cada grupo (con nota distinta para algún integrante si hace falta). Las notas se mandan al asistente y se cargan en la evaluación de SIGED que elijas, sin planillas. Los grupos quedan guardados por actividad en tu navegador para retomarlos, duplicarlos, imprimirlos con las fotos o bajarlos en Excel. También podés descargar la plantilla del grupo en Excel para completarla con las notas.
+• Libro del Profesor: armá grupos de trabajo con un clic. Se abre una página con una carta por alumno, estilo figurita: foto, promedio, materias que subieron o bajaron, nota en la materia y faltas (datos que el asistente guarda solo desde SIGED), con la ficha completa a un clic. Repartilos al azar, en orden de lista o equilibrados por promedio (en N grupos o en grupos de N), tocá o arrastrá las cartas para acomodarlos, ponele nombre a la actividad y nota a cada grupo (con nota distinta para algún integrante si hace falta). Las notas se mandan al asistente y se cargan en la evaluación de SIGED que elijas, sin planillas. Los grupos quedan guardados por actividad en tu navegador para retomarlos, duplicarlos, imprimirlos con las fotos o bajarlos en Excel. También podés descargar la plantilla del grupo en Excel para completarla con las notas.
 
 • Evaluaciones (orales, escritos, parciales, etc.): importá notas y comentarios desde Excel o CSV, o exportá las que ya están cargadas. Funciona también con evaluaciones tipo Semáforo. La plantilla del Libro puede traer varias tareas (cada una con nota y comentario) y al importarla elegís cuál cargar.
 
-• Anotaciones para el próximo juicio: un cuadro por alumno, que podés activar u ocultar, para anotar actitudes o pendientes durante el período; cuando escribís el juicio en el boletín, el asistente te las recuerda y las pega en el campo con un clic.
+• Anotaciones para el próximo juicio: una página propia donde anotás por alumno, con fecha y etiquetas rápidas (participa, colabora, no entrega tareas, conducta…), lo que quieras recordar; cuando escribís el juicio en el boletín, el asistente te las recuerda y las pega en el campo con un clic.
 
 • Promedios guardados: cada vez que el asistente ve promedios los guarda por libreta, alumno y período, y desde el Libro del Profesor podés bajar el historial en Excel.
 

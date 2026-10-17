@@ -1134,7 +1134,7 @@
         A.get('anotaciones:' + clave).then(res => {
             if (anot.clave !== clave) return;
             anot.datos = res['anotaciones:' + clave] || { libreta: estado.contexto.libreta, modificado: 0, alumnos: {} };
-            if (anotacionesActivas()) render();
+            render();
         }).catch(() => {});
     }
 
@@ -1148,41 +1148,18 @@
         return asig.map(a => (a ? { id: a.entrada.id, rec: anot.datos.alumnos[a.entrada.id] } : null));
     }
 
-    const guardarAnotacionesDebounced = debounce(() => {
-        if (!A || !anot.datos || !anot.clave) return;
-        A.set({ ['anotaciones:' + anot.clave]: anot.datos }).then(pedirSync).catch(() => {});
-    }, 600);
-
-    function escribirAnotacion(i, texto) {
-        if (!anot.datos) return;
-        const fila = estado.anotFilas[i];
-        if (!fila) return;
-        let m = estado.anotMap[i];
-        if (!m) {
-            const nombre = nombreFila(fila);
-            const id = idAlumno(nombre);
-            anot.datos.alumnos[id] = anot.datos.alumnos[id] || { nombre, texto: '', fecha: 0 };
-            m = estado.anotMap[i] = { id, rec: anot.datos.alumnos[id] };
-        }
-        m.rec.texto = texto;
-        m.rec.fecha = Date.now();
-        if (!m.rec.texto.trim()) delete anot.datos.alumnos[m.id];
-        anot.datos.modificado = Date.now();
-        anot.datos.libreta = estado.contexto.libreta || anot.datos.libreta;
-        guardarAnotacionesDebounced();
-    }
-
     function pegarAnotacion(i) {
         const fila = estado.anotFilas[i];
         const m = estado.anotMap[i];
-        if (!fila || !m || !m.rec.texto) return;
+        const texto = m ? textoAnotacion(m.rec) : '';
+        if (!fila || !texto) return;
         if (!fila.textarea || !esVisible(fila.textarea)) {
             estado.mensaje = { tipo: 'aviso', texto: 'En esta fila no hay un campo de juicio visible donde pegar la anotación.' };
             render();
             return;
         }
         const actual = String(fila.textarea.value || '').trim();
-        const r = escribirTexto(fila.textarea, actual ? actual + ' ' + m.rec.texto.trim() : m.rec.texto.trim());
+        const r = escribirTexto(fila.textarea, actual ? actual + ' ' + texto : texto);
         if (fila.tr) pintarFila(fila.tr, '#fff8e1');
         estado.mensaje = r.ok
             ? { tipo: 'ok', texto: `Anotación pegada en el juicio de ${nombreFila(fila)}. Revisá y hacé clic en Guardar en SIGED.` }
@@ -1190,41 +1167,66 @@
         render();
     }
 
+    /** Lista de alumnos de la página para que la página de anotaciones los muestre aunque no haya libreta guardada */
+    function listaAlumnosPagina() {
+        return estado.filas.map(f => nombreFila(f)).filter(Boolean);
+    }
+
+    function abrirAnotaciones() {
+        const clave = claveLibreta();
+        if (!A || !clave) return;
+        const continuar = (datos) => {
+            datos = datos || { libreta: estado.contexto.libreta, modificado: 0, alumnos: {} };
+            const lista = listaAlumnosPagina();
+            if (lista.length) datos.lista = lista;
+            datos.libreta = estado.contexto.libreta || datos.libreta;
+            return A.set({ ['anotaciones:' + clave]: datos }).then(() => {
+                anot.clave = ''; // se vuelve a leer al volver
+                try {
+                    chrome.runtime.sendMessage({ action: 'abrirPagina', pagina: 'anotaciones.html', query: { libreta: clave } }, (resp) => {
+                        if (chrome.runtime.lastError || !resp || !resp.ok) { estado.mensaje = { tipo: 'aviso', texto: 'No se pudo abrir la pestaña. Hacé clic en el ícono de la extensión y elegí "Anotaciones".' }; render(); }
+                    });
+                } catch (e) { estado.mensaje = { tipo: 'aviso', texto: 'Las anotaciones se abren desde la extensión instalada en Chrome.' }; render(); }
+            });
+        };
+        A.get('anotaciones:' + clave).then(res => continuar(res['anotaciones:' + clave])).catch(() => continuar(null));
+    }
+
+    /** Texto para el juicio: el que compila la página de anotaciones (etiquetas + texto de cada entrada) */
+    const textoAnotacion = (rec) => {
+        if (!rec) return '';
+        if (String(rec.texto || '').trim()) return String(rec.texto).trim();
+        if (Array.isArray(rec.entradas) && rec.entradas.length) {
+            return rec.entradas.map(e => [(e.etiquetas || []).join(', '), String(e.texto || '').trim()].filter(Boolean).join(': ')).filter(Boolean).join('. ').replace(/\.\./g, '.');
+        }
+        return '';
+    };
+
+    /**
+     * Tarjeta del panel: solo un acceso a la página de anotaciones. En el boletín, además,
+     * los recordatorios (nombre + texto) de los alumnos anotados, con "al juicio" (se pueden ocultar).
+     */
     function renderAnotaciones(filas, opciones) {
         opciones = opciones || {};
         if (!A || !filas || !filas.length || !claveLibreta()) return '';
         cargarAnotaciones();
-        const on = anotacionesActivas();
+        const alumnos = anot.datos ? Object.values(anot.datos.alumnos).filter(r => textoAnotacion(r)) : [];
         let html = `<div class="caja anot-caja">
-            <div class="tit" style="display:flex;justify-content:space-between;align-items:center;gap:6px">📝 Anotaciones para el próximo juicio
-                <label class="anot-switch" title="Mostrar u ocultar el cuadro de anotaciones en el asistente"><input type="checkbox" data-act="anot-toggle" ${on ? 'checked' : ''}> ${on ? 'activadas' : 'activar'}</label></div>`;
-        if (!on) return html + `<div class="ayuda">Guardá actitudes o elementos de cada alumno durante el período; el asistente te los recuerda cuando escribas el juicio.</div></div>`;
-        if (!anot.datos) return html + `<div class="ayuda">Cargando anotaciones…</div></div>`;
-        const mapa = anotacionesDeFilas(filas);
-        estado.anotFilas = filas;
-        estado.anotMap = mapa;
-        const indices = filas.map((f, i) => i);
-        const conTexto = indices.filter(i => mapa[i] && mapa[i].rec.texto);
-        let visibles = indices;
-        if (opciones.soloConTexto && !estado.anotTodos) {
-            visibles = conTexto.concat(estado.anotExtra !== undefined && estado.anotExtra !== '' && !conTexto.includes(+estado.anotExtra) ? [+estado.anotExtra] : []);
-        }
-        html += `<div class="ayuda">${conTexto.length} de ${filas.length} alumno${filas.length === 1 ? '' : 's'} con anotaciones · se guardan en este navegador.</div>`;
-        if (opciones.soloConTexto && !estado.anotTodos) {
-            const otros = indices.filter(i => !visibles.includes(i));
-            if (otros.length) html += `<select data-act="anot-agregar"><option value="">＋ Anotar sobre otro alumno…</option>${otros.map(i => `<option value="${i}">${escapeHtml(nombreFila(filas[i]))}</option>`).join('')}</select>`;
-            if (!conTexto.length && !visibles.length) html += `<div class="ayuda">Todavía no hay anotaciones en esta libreta.</div>`;
-        }
-        html += `<div class="anot-lista">` + visibles.map(i => {
-            const f = filas[i];
-            const t = mapa[i] ? mapa[i].rec.texto : '';
-            return `<div class="anot">
-                <div class="anot-nom"><span>${escapeHtml(nombreFila(f))}</span>${opciones.pegar && t ? `<button class="link" data-act="anot-pegar" data-fila="${i}" title="Agrega el texto al juicio de este alumno en la grilla">↘ al juicio</button>` : ''}</div>
-                <textarea class="anot-txt" data-act="anotacion" data-fila="${i}" rows="${t.length > 70 ? 3 : 1}" placeholder="Actitudes, participación, pendientes…">${escapeHtml(t)}</textarea>
-            </div>`;
-        }).join('') + `</div>`;
-        if (opciones.soloConTexto && filas.length > 1) {
-            html += `<div style="text-align:center"><button class="link" data-act="anot-todos">${estado.anotTodos ? 'Ver solo los que tienen anotaciones' : 'Ver todos los alumnos'}</button></div>`;
+            <div class="tit">📝 Anotaciones para el próximo juicio</div>
+            <button class="btn btn-gris" data-act="anot-abrir"><span class="ic">📝</span><span>Abrir las anotaciones de esta libreta<small>${anot.datos ? (alumnos.length ? alumnos.length + ' alumno' + (alumnos.length === 1 ? '' : 's') + ' con anotaciones' : 'Todavía no hay anotaciones') : 'Se abre en otra pestaña'} · actitudes, participación, pendientes</small></span></button>`;
+        if (opciones.pegar && alumnos.length) {
+            const on = anotacionesActivas();
+            html += `<label class="anot-switch"><input type="checkbox" data-act="anot-toggle" ${on ? 'checked' : ''}> Recordármelas acá mientras escribo los juicios</label>`;
+            if (on) {
+                const mapa = anotacionesDeFilas(filas);
+                estado.anotFilas = filas;
+                estado.anotMap = mapa;
+                html += `<div class="anot-lista">` + filas.map((f, i) => {
+                    const t = mapa[i] ? textoAnotacion(mapa[i].rec) : '';
+                    if (!t) return '';
+                    return `<div class="anot"><div class="anot-nom"><span>${escapeHtml(nombreFila(f))}</span><button class="link" data-act="anot-pegar" data-fila="${i}" title="Agrega el texto al juicio de este alumno en la grilla">↘ al juicio</button></div><div class="anot-rec">${escapeHtml(t)}</div></div>`;
+                }).join('') + `</div>`;
+            }
         }
         return html + `</div>`;
     }
@@ -1250,7 +1252,12 @@
             const ficha = p.clave === 'cierre' ? (a && a.asignaturasVisibles ? C.fichaDesdeCierre(a, estado.comparacionSel) : null) : a;
             if (ficha && ficha.materias && ficha.materias.length) {
                 const r = C.resumen(ficha, estado.comparacionSel);
-                capturas.push({ nombre: nombreFila(ficha), periodo: ficha.periodo || ficha.titulo || '', promedio: r.promedio === null ? '' : String(r.promedio), bajas: r.bajas.length, faltas: ficha.faltas, origen: p.etiqueta });
+                const nom = m => m.nombre;
+                capturas.push({ nombre: nombreFila(ficha), periodo: ficha.periodo || ficha.titulo || '', promedio: r.promedio === null ? '' : String(r.promedio),
+                    promedioAnterior: r.promedioAnterior === null || r.promedioAnterior === undefined ? '' : String(r.promedioAnterior), comparadoCon: r.comparacion ? r.comparacion.titulo : '',
+                    bajas: r.bajas.length, faltas: ficha.faltas, origen: p.etiqueta,
+                    materias: { bajas: r.bajas.map(nom), subieron: r.subieron.map(nom), bajaron: r.bajaron.map(nom), iguales: r.iguales.length },
+                    notas: ficha.materias.filter(mm => mm.nota).map(mm => [mm.nombre, mm.nota]) });
             }
         }
         return capturas.filter(c => c.nombre && c.periodo);
@@ -1520,7 +1527,7 @@
         .anot-switch { font-weight: 400; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 3px; color: #6c5a8e; text-transform: none; }
         .anot-lista { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
         .anot-nom { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; color: #4a3b6b; margin-bottom: 2px; }
-        .anot-txt { width: 100%; box-sizing: border-box; font-size: 11px; font-family: inherit; padding: 4px 6px; border: 1px solid #d3c5ea; border-radius: 5px; resize: vertical; min-height: 24px; background: #fff; }
+        .anot-rec { font-size: 11px; color: #4a3b6b; background: #fff; border: 1px solid #e4dbf3; border-radius: 5px; padding: 4px 6px; }
         .ficha { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
         .ficha .cab { display: flex; gap: 12px; align-items: center; }
         .ficha .foto { width: 64px; height: 80px; border-radius: 8px; object-fit: cover; background: #ecf0f1; border: 1px solid #d5dbe0; flex: none; }
@@ -1966,7 +1973,7 @@
             case 'plantilla-descargar': exportar(btn.dataset.formato); break;
             case 'promedios-excel': exportarPromediosLibro(); break;
             case 'anot-pegar': pegarAnotacion(parseInt(btn.dataset.fila, 10)); break;
-            case 'anot-todos': estado.anotTodos = !estado.anotTodos; render(); break;
+            case 'anot-abrir': abrirAnotaciones(); break;
             case 'exportar-cierre': exportarCierreActual(); break;
             case 'recorrido-iniciar': iniciarRecorrido(); break;
             case 'recorrido-detener': detenerRecorrido(true); break;
@@ -2021,9 +2028,6 @@
         } else if (act === 'anot-toggle') {
             try { localStorage.setItem(CLAVE_ANOT_ON, el.checked ? '1' : '0'); } catch (e) { /* ignorar */ }
             render();
-        } else if (act === 'anot-agregar') {
-            estado.anotExtra = el.value;
-            render();
         } else if (act === 'asignar') {
             const fi = parseInt(el.dataset.fila, 10);
             estado.asignacion[fi] = parseInt(el.value, 10);
@@ -2038,9 +2042,6 @@
         const act = el.dataset && el.dataset.act;
         if (act === 'plantilla-nombre' && estado.plantilla) {
             estado.plantilla.nombres[parseInt(el.dataset.i, 10)] = el.value;
-        } else if (act === 'anotacion') {
-            escribirAnotacion(parseInt(el.dataset.fila, 10), el.value);
-            if (el.value.length > 70 && el.rows < 3) el.rows = 3;
         }
     });
 

@@ -12,7 +12,7 @@ ofrece únicamente los botones que sirven ahí. Pensada para docentes: todo se h
 
 | Página de SIGED | Qué ofrece el panel |
 |-----------------|---------------------|
-| **Libro del Profesor** (lista de alumnos del grupo) | 📥 Descargar la **plantilla del grupo** (Excel o CSV): antes de bajarla preguntá cuántas **tareas** incluir, cada una con su columna de nota y de comentario; al importarla el asistente pregunta qué tarea cargar. · 📝 **Anotaciones para el próximo juicio** y 📈 **promedios guardados** de la libreta. · 👥 **Armar grupos**: abre una página propia con las fichas de los alumnos (con su foto de SIGED) para repartirlos al azar o arrastrarlos, ponerle nota a cada grupo y mandar esas notas al asistente para cargarlas en la evaluación que elijas. |
+| **Libro del Profesor** (lista de alumnos del grupo) | 📥 Descargar la **plantilla del grupo** (Excel o CSV): antes de bajarla preguntá cuántas **tareas** incluir, cada una con su columna de nota y de comentario; al importarla el asistente pregunta qué tarea cargar. · 📝 Acceso a las **anotaciones para el próximo juicio** y 📈 **promedios guardados** de la libreta. · 👥 **Armar grupos**: abre una página propia con las fichas de los alumnos (con su foto de SIGED) para repartirlos al azar o arrastrarlos, ponerle nota a cada grupo y mandar esas notas al asistente para cargarlas en la evaluación que elijas. |
 | **Evaluaciones** (escritos, parciales, orales, etc.) | 📥 Exportar las notas ya cargadas · 📤 Importar notas desde un archivo. |
 | **Pasaje de calificaciones boletín por libreta** (semestrales, reuniones) | 📥 Exportar notas y juicios · 📤 Importar notas y juicios desde un archivo. |
 | **Orales, Escritos y O. Actividades** (detalle por alumno) | 📥 Descargar un Excel con **todas las notas y comentarios**, los **promedios por período** (notas por tipo, rendimiento e inasistencias) y un resumen por alumno. De un alumno o de todos los visibles. |
@@ -47,9 +47,9 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 > Se guarda una sola evaluación a la vez para que sea simple. Si preferís un archivo, cada evaluación también se puede descargar en Excel desde el mismo lugar.
 
 ### 3c. Armar grupos de trabajo con fotos y cargarles la nota (Libro del Profesor)
-1. En el **Libro del Profesor**, elegí la libreta y hacé clic en **Armar grupos con este grupo**. Se abre otra pestaña con la ficha de cada alumno (foto y nombre).
+1. En el **Libro del Profesor**, elegí la libreta y hacé clic en **Armar grupos con este grupo**. Se abre otra pestaña con una **carta** por alumno, estilo figurita: foto, **promedio** (verde, ámbar o rojo), materias que **subieron ▲ / bajaron ▼** respecto del período anterior, la nota en **esta materia** con su tendencia y las **faltas**. Los datos salen de los promedios que el asistente guarda solo cuando ves Orales/Escritos (TODOS), el Cierre o el Corrector en SIGED; con el botón **i** se abre la ficha completa (períodos, materias con baja, notas por materia y anotaciones para el juicio).
 2. Hacé clic en **＋ Nueva** y ponele nombre a la actividad (por ejemplo "Proyecto de óptica").
-3. Elegí **Repartir en N grupos** o **grupos de N integrantes** y usá **🎲 Al azar** o **🔤 En orden de lista**. Para retocar, tocá una o varias fichas y después tocá el grupo donde van (o arrastralas); también podés agregar o quitar grupos y cambiarles el nombre.
+3. Elegí **Repartir en N grupos** o **grupos de N integrantes** y usá **🎲 Al azar**, **🔤 En orden de lista** o **⚖️ Equilibrados** (reparte en serpentina por promedio, así cada grupo mezcla alumnos que van bien y otros que van más flojos; cada grupo muestra su promedio). Para retocar, tocá una o varias cartas y después tocá el grupo donde van (o arrastralas); también podés agregar o quitar grupos y cambiarles el nombre.
 4. Escribí la **nota del grupo** arriba a la derecha de cada grupo (y un comentario, si querés). Si un integrante lleva otra nota, escribila en su ficha.
 5. **📤 Mandar notas al asistente**: entrá en SIGED a la evaluación donde van (Escritos, Parcial, etc.) y el panel te ofrece **Cargar estas notas acá**, con la vista previa de siempre. También podés bajar un **Excel** (hoja *Notas* importable) o **imprimir** los grupos con las fotos.
 6. Todo queda guardado en tu navegador: podés cerrar la pestaña y retomar después (ícono de la extensión → **Armar grupos**), tener varias actividades por libreta y duplicar unos grupos para otra actividad. Con **💾 Respaldo** podés descargar un archivo para pasarlo a otra computadora.
@@ -60,9 +60,9 @@ El panel se puede minimizar, arrastrar y recuerda su posición. También se pued
 3. Al importarla en **Evaluaciones** o en el **Boletín**, el asistente pregunta **qué tarea de la planilla cargar** (igual que con una exportación de CREA) y muestra la vista previa de esa tarea.
 
 ### 3e. Anotaciones para el próximo juicio
-- En cualquier página de una libreta (Libro, Evaluaciones, Boletín, Orales/Escritos, Cierre, Corrector) el panel tiene la tarjeta **📝 Anotaciones para el próximo juicio** con un interruptor para activarla o dejarla oculta.
-- Activada, muestra un cuadro de texto por alumno para anotar actitudes, participación o pendientes durante el período. Se guarda solo (en el navegador y en Drive si está conectado) y reconoce al mismo alumno aunque el nombre esté abreviado en otra página.
-- En **Pasaje de calificaciones al boletín** aparecen solo los alumnos con anotaciones y cada uno tiene el botón **↘ al juicio**, que agrega el texto al campo de juicio de esa fila para que lo edites y guardes en SIGED.
+- En cualquier página de una libreta el panel tiene el acceso **📝 Abrir las anotaciones de esta libreta**, que abre una **página propia** (también desde el ícono de la extensión → Anotaciones) con la lista de alumnos (con sus fotos si ya usaste Armar grupos).
+- Por alumno se agregan **entradas fechadas**: etiquetas rápidas (Participa, Colabora, Mejoró, No entrega tareas, Distraído/a, Conducta, Necesita apoyo…) más texto libre. Se guardan solas en el navegador (y en Drive si está conectado), se exportan a Excel y se imprimen.
+- En **Pasaje de calificaciones al boletín**, el panel muestra cuántos alumnos tienen anotaciones y un interruptor **Recordármelas acá mientras escribo los juicios**: activado, lista a cada alumno anotado con el botón **↘ al juicio**, que pega el texto (etiquetas + anotaciones, en orden) en el campo de juicio de esa fila para que lo edites y guardes en SIGED. Los textos no se muestran en el panel en las demás páginas.
 
 ### 3f. Promedios que se guardan solos
 Cada vez que el asistente ve promedios (Orales, Escritos y O. Act. con TODOS, la ficha del Cierre de promedios o el Corrector por curso) los guarda por libreta, alumno y período. En el **Libro del Profesor** la tarjeta **📈 Promedios guardados** muestra cuántos hay y permite **descargar el historial en Excel** (un alumno por fila, un período por columna, más una hoja de detalle con faltas y bajas).
@@ -132,7 +132,8 @@ CargaNotasSIGED/
 ├── manifest.json          # Configuración de la extensión (Manifest V3)
 ├── content.js             # Panel en la página: detección de página, importar/exportar, carga de notas
 ├── background.js          # Service worker: abre la página de grupos y sincroniza con Google Drive
-├── grupos.html / grupos.js # Página "Armar grupos": fichas con foto, reparto, notas por grupo, Excel e impresión
+├── grupos.html / grupos.js # Página "Armar grupos": cartas con foto y estadísticas, reparto (azar / lista / equilibrado), notas por grupo, Excel e impresión
+├── anotaciones.html / anotaciones.js # Página "Anotaciones para el juicio": entradas fechadas con etiquetas por alumno
 ├── shared/
 │   ├── matching.js        # Comparación de nombres (Levenshtein, tokens, asignación única)
 │   ├── formatos.js        # Lectura/escritura de Excel y CSV, detección de columnas y formatos
@@ -166,7 +167,8 @@ La detección se hace por el contenido, no por la URL:
 
 ### v3.9
 - ✨ **Plantilla con varias tareas**: antes de descargarla, el Libro pregunta cuántas tareas incluir (con nombre y comentario por tarea); al importar se elige qué tarea cargar.
-- ✨ **Anotaciones para el próximo juicio** por alumno y libreta, con interruptor en el panel y botón "↘ al juicio" en el boletín.
+- ✨ **Anotaciones para el próximo juicio** en una página propia (entradas fechadas con etiquetas y texto por alumno, Excel, impresión); el panel solo da el acceso y, en el boletín, los recordatorios con "↘ al juicio".
+- ✨ **Cartas de alumnos** en Armar grupos: promedio, materias que subieron/bajaron, nota en la materia, faltas y ficha completa con un clic; reparto **⚖️ Equilibrado** por promedio y promedio por grupo.
 - ✨ **Promedios guardados solos** desde las páginas que los muestran, con historial descargable en Excel desde el Libro.
 - ✨ **Google Drive** opcional: copia en *Asistente de SIGED / año* de fichas, grupos, anotaciones y promedios; sincronización automática y "Retomar año…".
 

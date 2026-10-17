@@ -124,6 +124,11 @@ document.getElementById('btnGrupos').addEventListener('click', () => {
     window.close();
 });
 
+document.getElementById('btnAnotaciones').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('anotaciones.html') });
+    window.close();
+});
+
 document.getElementById('btnImportar').addEventListener('click', async () => {
     await enviar('importar');
     window.close();

@@ -142,8 +142,12 @@ function programarSync() {
 // ---------------------------------------------------------------- mensajes
 chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     if (!req) return false;
-    if (req.action === 'abrirGrupos') {
-        const url = chrome.runtime.getURL('grupos.html') + (req.libretaId ? '?libreta=' + encodeURIComponent(req.libretaId) : '');
+    if (req.action === 'abrirGrupos' || req.action === 'abrirPagina') {
+        const pagina = req.action === 'abrirGrupos' ? 'grupos.html' : String(req.pagina || '').replace(/[^a-z0-9_.-]/gi, '');
+        if (!/^[a-z0-9_-]+\.html$/i.test(pagina)) { sendResponse({ ok: false, error: 'página inválida' }); return false; }
+        const query = req.action === 'abrirGrupos' ? (req.libretaId ? { libreta: req.libretaId } : {}) : (req.query || {});
+        const qs = Object.keys(query).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(query[k])).join('&');
+        const url = chrome.runtime.getURL(pagina) + (qs ? '?' + qs : '');
         chrome.tabs.create({ url, index: sender.tab ? sender.tab.index + 1 : undefined }, () => sendResponse({ ok: !chrome.runtime.lastError }));
         return true; // respuesta asíncrona
     }

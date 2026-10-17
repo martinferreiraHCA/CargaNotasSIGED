@@ -44,7 +44,7 @@
 1. Entra a SIGED y recarga la página (F5) si ya la tenías abierta.
 2. Abajo a la derecha aparece el panel **🎓 Asistente de SIGED** (si está minimizado, haz clic en el botón).
 3. El panel reconoce solo la página:
-   - **Libro del Profesor:** plantilla del grupo (con una o varias tareas), **Armar grupos** (otra pestaña con las fichas y fotos de los alumnos), anotaciones para el juicio y promedios guardados.
+   - **Libro del Profesor:** plantilla del grupo (con una o varias tareas), **Armar grupos** (otra pestaña con cartas de los alumnos: foto, promedio, materias que subieron o bajaron, faltas), acceso a las **anotaciones para el juicio** (página propia) y promedios guardados.
    - **Evaluaciones** y **Pasaje de calificaciones boletín:** botones para exportar e importar notas.
    - **Orales, Escritos y O. Actividades:** botón para descargar el Excel con notas, comentarios y promedios por período.
    - **Cierre de promedios por alumno:** selector para ver la ficha del alumno (notas por materia) o recorrer todos los alumnos y descargar el Excel con los juicios de todas las reuniones.

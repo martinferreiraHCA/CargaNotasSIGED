@@ -37,29 +37,42 @@
         .mensaje.aviso { display: block; background: #fff3cd; border-color: #ffc107; color: #856404; }
         .mensaje.error { display: block; background: #f8d7da; border-color: #dc3545; color: #721c24; }
         .mensaje.info { display: block; background: #d1ecf1; border-color: #17a2b8; color: #0c5460; }
-        main { padding: 14px 18px 40px; display: grid; grid-template-columns: 200px 1fr; gap: 14px; align-items: start; }
+        main { padding: 14px 18px 40px; display: grid; grid-template-columns: 170px 1fr; gap: 14px; align-items: start; }
         .columna.sin-grupo { position: sticky; top: 58px; max-height: calc(100vh - 70px); display: flex; flex-direction: column; }
-        .columna.sin-grupo .fichas { overflow-y: auto; flex: 1; }
-        .columna.sin-grupo .ficha { padding: 3px 4px; gap: 6px; }
-        .columna.sin-grupo .ficha img, .columna.sin-grupo .ficha .inicial { width: 26px; height: 32px; }
+        .columna.sin-grupo .fichas { overflow-y: auto; flex: 1; grid-template-columns: 1fr; }
         .columna.sin-grupo .ficha select.mover { display: none; }
         .columna.sin-grupo .pista { font-size: 11px; color: #7f8c8d; padding: 6px 10px; border-top: 1px solid #eef1f4; }
         .columna { background: #fff; border: 1px solid #d9dee3; border-radius: 10px; min-height: 120px; }
         .columna.sobre, .grupo.sobre { outline: 3px dashed #3498db; outline-offset: -3px; background: #eaf4fb; }
         .columna h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .4px; color: #7f8c8d; margin: 0; padding: 10px 12px; border-bottom: 1px solid #eef1f4; }
-        .fichas { padding: 6px; display: flex; flex-direction: column; gap: 4px; min-height: 48px; }
-        .ficha { display: flex; align-items: center; gap: 6px; background: #f8f9fa; border: 1px solid #e3e7eb; border-radius: 7px; padding: 3px 5px; cursor: grab; user-select: none; }
-        .ficha:hover { border-color: #b9c4cf; }
-        .ficha.elegida { background: #fff3cd; border-color: #f0b429; box-shadow: 0 0 0 2px #ffe08a inset; }
+        .fichas { padding: 6px; display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 6px; min-height: 60px; align-content: start; }
+        /* ---- cartas de alumnos (estilo figurita) ---- */
+        .ficha { position: relative; display: flex; flex-direction: column; background: linear-gradient(160deg, #ffffff, #f1f4f8); border: 1px solid #d5dce3; border-radius: 10px; padding: 6px 7px 5px; cursor: grab; user-select: none; box-shadow: 0 1px 2px rgba(0,0,0,.06); min-width: 0; }
+        .ficha:hover { border-color: #9fb3c8; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
         .ficha:active { cursor: grabbing; }
         .ficha.arrastrando { opacity: .4; }
-        .ficha img, .ficha .inicial { width: 28px; height: 34px; border-radius: 5px; object-fit: cover; background: #dfe6ec; flex: none; pointer-events: none; }
-        .ficha .inicial { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #5a6c7d; font-size: 13px; }
-        .ficha .nombre { flex: 1; font-size: 11px; line-height: 1.15; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ficha .nombre b { font-size: 11px; margin-right: 3px; }
-        .ficha .nota-ind { width: 34px; padding: 2px 3px; border: 1px solid #ccd3d9; border-radius: 5px; font-size: 11px; text-align: center; }
-        .ficha select.mover { width: 22px; padding: 1px; border: 1px solid #ccd3d9; border-radius: 5px; font-size: 11px; background: #fff; }
-        .grupos { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
+        .ficha.elegida { background: linear-gradient(160deg, #fff8dc, #ffeeb0); border-color: #f0b429; box-shadow: 0 0 0 2px #ffe08a inset; }
+        .ficha .carta-top { display: flex; align-items: flex-start; gap: 6px; }
+        .ficha .rating { width: 38px; text-align: center; font-weight: 800; font-size: 17px; line-height: 1; color: #fff; border-radius: 7px; padding: 5px 0 3px; background: #95a5a6; flex: none; }
+        .ficha .rating small { display: block; font-size: 8px; font-weight: 700; letter-spacing: .5px; opacity: .9; margin-top: 2px; }
+        .ficha .rating.alto { background: linear-gradient(180deg, #2ecc71, #1e8f4e); }
+        .ficha .rating.medio { background: linear-gradient(180deg, #f5b041, #d68910); }
+        .ficha .rating.bajo { background: linear-gradient(180deg, #e74c3c, #a93226); }
+        .ficha img, .ficha .inicial { width: 54px; height: 66px; border-radius: 7px; object-fit: cover; background: #dfe6ec; flex: none; pointer-events: none; margin: 0 auto; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+        .ficha .inicial { display: flex; align-items: center; justify-content: center; font-weight: 700; color: #5a6c7d; font-size: 20px; }
+        .ficha .info { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: #e3e9ef; color: #34495e; font-size: 11px; font-weight: 700; cursor: pointer; line-height: 20px; padding: 0; }
+        .ficha .info:hover { background: #3498db; color: #fff; }
+        .ficha .nombre { margin-top: 5px; font-size: 11px; line-height: 1.15; text-align: center; min-width: 0; }
+        .ficha .nombre b { display: block; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ficha .nombre span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #5a6c7d; }
+        .ficha .stats { display: flex; justify-content: space-around; gap: 3px; margin-top: 5px; padding-top: 4px; border-top: 1px dashed #d5dce3; font-size: 10.5px; color: #34495e; white-space: nowrap; }
+        .ficha .stats b { font-weight: 700; }
+        .ficha .stats .sube { color: #1e8f4e; } .ficha .stats .baja { color: #c0392b; } .ficha .stats .igual { color: #7f8c8d; }
+        .ficha .stats .sin { color: #b0b8bf; font-style: italic; }
+        .ficha .pie { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 5px; }
+        .ficha .nota-ind { width: 40px; padding: 2px 3px; border: 1px solid #ccd3d9; border-radius: 5px; font-size: 11px; text-align: center; }
+        .ficha select.mover { width: 24px; padding: 1px; border: 1px solid #ccd3d9; border-radius: 5px; font-size: 11px; background: #fff; }
+        .grupos { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
         .grupo.destino { outline: 2px dashed #f0b429; outline-offset: -2px; cursor: copy; }
         .columna.sin-grupo.destino { outline: 2px dashed #f0b429; outline-offset: -2px; cursor: copy; }
         .grupo { background: #fff; border: 1px solid #d9dee3; border-radius: 10px; display: flex; flex-direction: column; }
@@ -67,6 +80,8 @@
         .grupo .cab input.nombre-grupo { flex: 1; min-width: 0; border: 1px solid transparent; background: transparent; font-weight: 700; font-size: 13px; padding: 3px 5px; border-radius: 6px; color: #2c3e50; }
         .grupo .cab input.nombre-grupo:hover, .grupo .cab input.nombre-grupo:focus { border-color: #b9c4cf; background: #fff; outline: none; }
         .grupo .cab .cant { font-size: 11px; color: #7f8c8d; white-space: nowrap; }
+        .grupo .cab .prom { font-size: 11px; color: #1e8f4e; font-weight: 700; white-space: nowrap; }
+        .grupo .cab .prom.sin { color: #b0b8bf; font-weight: 400; }
         .grupo .cab .nota-grupo { width: 46px; padding: 3px; border: 1px solid #b9c4cf; border-radius: 6px; font-size: 14px; font-weight: 700; text-align: center; }
         .grupo .cab .quitar { background: none; border: 0; color: #95a5a6; cursor: pointer; font-size: 16px; padding: 0 4px; }
         .grupo .cab .quitar:hover { color: #c0392b; }
@@ -78,12 +93,31 @@
         dialog h3 { margin: 0 0 10px; font-size: 15px; }
         dialog input[type=text] { width: 100%; padding: 8px; border: 1px solid #b9c4cf; border-radius: 6px; font-size: 14px; }
         dialog .acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+        dialog.ficha-dialogo { width: 560px; }
+        .fd-cab { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+        .fd-cab img, .fd-cab .inicial { width: 72px; height: 88px; border-radius: 9px; object-fit: cover; background: #dfe6ec; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; color: #5a6c7d; }
+        .fd-cab h3 { margin: 0 0 4px; font-size: 17px; }
+        .fd-cab .rating { display: inline-block; font-weight: 800; font-size: 20px; color: #fff; border-radius: 7px; padding: 3px 10px; background: #95a5a6; }
+        .fd-cab .rating.alto { background: #1e8f4e; } .fd-cab .rating.medio { background: #d68910; } .fd-cab .rating.bajo { background: #a93226; }
+        .fd-kpis { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+        .fd-kpi { flex: 1; min-width: 90px; background: #f4f7fa; border-radius: 8px; padding: 6px 8px; text-align: center; }
+        .fd-kpi .v { font-size: 18px; font-weight: 800; } .fd-kpi .e { font-size: 10px; color: #7f8c8d; text-transform: uppercase; letter-spacing: .4px; }
+        .fd-kpi.verde .v { color: #1e8f4e; } .fd-kpi.rojo .v { color: #c0392b; }
+        .fd-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px; }
+        .fd-chip { font-size: 11px; border-radius: 10px; padding: 2px 8px; background: #eef1f4; color: #34495e; }
+        .fd-chip.sube { background: #d4edda; color: #155724; } .fd-chip.baja { background: #f8d7da; color: #721c24; } .fd-chip.roja { background: #c0392b; color: #fff; }
+        .fd-sec { font-size: 12px; font-weight: 700; color: #5a6c7d; margin: 8px 0 2px; }
+        table.fd-tabla { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table.fd-tabla th, table.fd-tabla td { border-bottom: 1px solid #eef1f4; padding: 4px 6px; text-align: left; }
+        table.fd-tabla th { color: #7f8c8d; font-weight: 600; font-size: 11px; }
+        .fd-anot { background: #fff8e1; border: 1px solid #f0d9a0; border-radius: 8px; padding: 8px; font-size: 12px; line-height: 1.4; }
+        .fd-sin { font-size: 12px; color: #7f8c8d; }
         .ayuda { font-size: 12px; color: #7f8c8d; margin: 0 18px; }
         .solo-impresion { display: none; }
         @media print {
             header, .barra, .mensaje, .ayuda, .ficha .nota-ind, .ficha select.mover, .grupo .cab .quitar, .columna.sin-grupo, .pista { display: none !important; }
-            .ficha img, .ficha .inicial { width: 40px; height: 50px; }
-            .ficha .nombre { font-size: 12px; white-space: normal; }
+            .ficha .info, .ficha .pie, .ficha .stats { display: none !important; }
+            .ficha { break-inside: avoid; }
             body { background: #fff; }
             main { display: block; padding: 0; }
             .solo-impresion { display: block; font-size: 18px; font-weight: 700; margin: 0 0 10px; }
@@ -121,6 +155,7 @@
         <label>o grupos de <input type="number" id="tamGrupo" min="1" max="30" value="4"> integrantes</label>
         <button class="btn btn-azul" id="btnAzar">🎲 Al azar</button>
         <button class="btn btn-gris" id="btnLista">🔤 En orden de lista</button>
+        <button class="btn btn-gris" id="btnEquilibrado" title="Reparte mezclando promedios altos y bajos para que los grupos queden parejos">⚖️ Equilibrados</button>
         <div class="sep"></div>
         <button class="btn btn-gris" id="btnAgregarGrupo">＋ Agregar grupo</button>
         <button class="btn btn-gris" id="btnVaciar" title="Pasa a todos los alumnos a Sin grupo">↺ Vaciar grupos</button>
@@ -137,7 +172,7 @@
     </div>
 
     <div class="mensaje" id="mensaje"></div>
-    <p class="ayuda" id="ayuda">Para armar los grupos: tocá una o varias fichas y después tocá el grupo donde van (o arrastralas). Todo se guarda solo en este navegador. La nota del grupo va arriba a la derecha de cada grupo; si un integrante tiene otra nota, escribila en su ficha.</p>
+    <p class="ayuda" id="ayuda">Tocá una o varias cartas y después el grupo donde van (o arrastralas). Cada carta muestra el promedio, las materias que subieron ▲ o bajaron ▼, la nota en esta materia y las faltas que el asistente fue guardando desde SIGED; con <b>i</b> ves la ficha completa. <b>⚖️ Equilibrados</b> mezcla promedios altos y bajos. La nota del grupo va arriba a la derecha; si un integrante tiene otra nota, escribila en su carta.</p>
 
     <main>
         <div class="solo-impresion" id="tituloImpresion"></div>
@@ -148,6 +183,11 @@
         </section>
         <section class="grupos" id="grupos"></section>
     </main>
+
+    <dialog id="dialogoFicha" class="ficha-dialogo">
+        <div id="fichaDetalle"></div>
+        <div class="acciones"><button class="btn btn-gris" id="btnAnotaciones">📝 Anotaciones</button><button class="btn btn-azul" id="fichaCerrar">Cerrar</button></div>
+    </dialog>
 
     <dialog id="dialogoNombre">
         <h3 id="dialogoTitulo">Nombre de la actividad</h3>
